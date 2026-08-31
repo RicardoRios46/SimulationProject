@@ -38,6 +38,8 @@ df = pd.read_csv(f"{signal_file}", comment="#")
 #Average signal across walkers
 df_averaged = df.groupby(['waveform_idx', 'bval'])['signal'].mean()
 
+df_averaged.reset_index().to_csv(output+ '/' + 'poweder_average_signal.csv', index=False)
+
 unique_waveforms = sorted(df['waveform_idx'].unique())
 
 #Store fit params
