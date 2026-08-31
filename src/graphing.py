@@ -11,7 +11,6 @@ Usage:
 
 
 import os
-import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -29,15 +28,15 @@ signal_file = args.signals
 graph_title = os.path.basename(signal_file)
 
 #Create output dir
-os.makedirs(f'graphOutputs/{graph_title}',exist_ok=True)
 output = f"graphOutputs/{graph_title}"
+os.makedirs(output,exist_ok=True)
 
 #Load signal data
 df = pd.read_csv(f"{signal_file}", comment="#")
 
 #Average signal across walkers
 df_averaged = df.groupby(['waveform_idx', 'bval'])['signal'].mean()
-
+# Save outputs in file
 df_averaged.reset_index().to_csv(output+ '/' + 'poweder_average_signal.csv', index=False)
 
 unique_waveforms = sorted(df['waveform_idx'].unique())
@@ -92,7 +91,7 @@ for wf in unique_waveforms:
     y_fit = np.exp(A * (x_fit**2) + B * x_fit + C)
 
     ax.scatter(b_arr, signals, marker='o', label=rf"$\bf{{{label_name}\ Data}}$")
-    ax.plot(x_fit, y_fit, linestyle='--', label=f"D: {d[-1]:.4e} µm²/ms\nK: {kurt[-1]:.4f}\nV: {variance[-1]:.4e} µm⁴/ms²")
+    ax.plot(x_fit, y_fit, linestyle='--', label=f"D: {d[-1]:.4f} µm²/ms\nK: {kurt[-1]:.4f}\nV: {variance[-1]:.4f} µm⁴/ms²")
 
 #Plot signal decay
 ax.set_yscale('log')
@@ -235,14 +234,14 @@ for waveform_file, df_wave in df.groupby("file", sort=False):
         gtab = gradient_table(bvals=bvals, bvecs=bvecs)
         fit = dki.DiffusionKurtosisModel(gtab).fit(signals)
 
-        print(f"Fractional Anisotropy (FA): {fit.fa:.3f}")
         fa.append(fit.fa)
-        print(f"Mean Diffusivity (MD):     {fit.md:.3e} mm^2/s")
+        print(f"Fractional Anisotropy (FA): {fit.fa:.3f}")        
         md.append(fit.md*1000)
-        print(f"Axial Diffusivity (AD):    {fit.ad:.3e} mm^2/s")
+        print(f"Mean Diffusivity (MD):     {fit.md*1000:.4f} um^2/ms")
         ad.append(fit.ad*1000)
-        print(f"Radial Diffusivity (RD):   {fit.rd:.3e} mm^2/s")
+        print(f"Axial Diffusivity (AD):    {fit.ad*1000:.4f} um^2/ms")
         rd.append(fit.rd*1000)
+        print(f"Radial Diffusivity (RD):   {fit.rd*1000:.4f} um^2/ms")        
 
         count += 1
 
@@ -297,25 +296,26 @@ for metric_name, diff, ax in metrics:
 
     #Display best-fit equation and values
     if best_fit_name == "Linear":
-        eq = f"y = {lin_params[0]:.3e}x {lin_params[1]:+.3e}"
+        eq = f"y = {lin_params[0]:.3f}x {lin_params[1]:+.3f}"
     elif best_fit_name == "Square Root":
-        eq = f"y = {sqrt_params[0]:.3e}x^1/2 {sqrt_params[1]:+.3e}"
+        eq = f"y = {sqrt_params[0]:.3f}x^1/2 {sqrt_params[1]:+.3f}"
     else:
-        eq = f"y = {sq_params[0]:.3e}x^2 {sq_params[1]:+.3e}"
+        eq = f"y = {sq_params[0]:.3f}x^2 {sq_params[1]:+.3f}"
 
     eq_text = (
         f"Best Fit: {best_fit_name}\n"
         f"{eq}\n\n"
-        f"0 Hz   = {diff[0]:.3e}\n"
-        f"50 Hz  = {diff[1]:.3e}\n"
-        f"100 Hz = {diff[2]:.3e}"
+        f"0 Hz   = {diff[0]:.3f}\n"
+        f"50 Hz  = {diff[1]:.3f}\n"
+        f"100 Hz = {diff[2]:.3f}"
     )
 
     ax.text(0.02,0.98,eq_text,transform=ax.transAxes,fontsize=8,verticalalignment="top",bbox=dict(facecolor="white", alpha=0.85, edgecolor="black"))
 
     #Fix AD y-axis range
 
-    ax.set_ylim(min(ad)*0.5,max(ad)*1.50) if metric_name == "Axial Diffusivity (AD)" else None
+    #ax.set_ylim(min(ad)*0.5,max(ad)*1.50) if metric_name == "Axial Diffusivity (AD)" else None
+    ax.set_ylim(min(min([ad+rd+md]))*0.6,max(max([ad+rd+md]))*1.3)
 
     ax.set_ylabel(f"{metric_name} ($\\mathrm{{µm^2/ms}}$)")
     ax.set_xlabel("Frequency (Hz)")
@@ -333,13 +333,34 @@ print(len(variance),len(kurt))
 
 waveform = ["LTE-0Hz","LTE-50Hz","LTE-100Hz","STE-Iso","STE-Aniso"]
 
-with open(f"{output}/results.csv", "w", newline="") as f:
-    writer = csv.writer(f)
+results_rows = []
+# LTE
+for i in range(3):
+    results_rows.append({
+        "Waveform": waveform[i],
+        "FA": fa[i],
+        "MD": md[i],
+        "AD": ad[i],
+        "RD": rd[i],
+        "D": d[i],
+        "Kurtosis": kurt[i],
+        "Variance": variance[i],
+    })
+#STE
+for j in range(3, 5):
+    results_rows.append({
+        "Waveform": waveform[j],
+        "FA": "",
+        "MD": "",
+        "AD": "",
+        "RD": "",
+        "D": d[j],
+        "Kurtosis": kurt[j],
+        "Variance": variance[j],
+    })
 
-    writer.writerow(["Waveform", "FA", "MD", "AD", "RD","D", "Kurtosis", "Variance"])
-
-    for i in range(3):
-        writer.writerow([waveform[i], fa[i], md[i], ad[i], rd[i], d[i], kurt[i], variance[i]])
-
-    for j in range(3, 5):
-        writer.writerow([waveform[j], "", "", "", "", d[j], kurt[j], variance[j]])
+results_df = pd.DataFrame(
+    results_rows,
+    columns=["Waveform", "FA", "MD", "AD", "RD", "D", "Kurtosis", "Variance"],
+)
+results_df.to_csv(f"{output}/results.csv", index=False)
