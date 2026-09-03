@@ -99,8 +99,8 @@ ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
 ax.set_xlabel("X (um)")
 ax.set_ylabel("Y (um)")
-ax.set_zlabel("Z (uum)")
-ax.set_title("Non Overlapping 3D Random Sphere Substrate (4-12um)")
+ax.set_zlabel("Z (um)")
+ax.set_title("Non Overlapping 3D Random Sphere Substrate")
 
 plt.savefig(f'{output_dir}/{substrate_name}_mesh.png', dpi=300, bbox_inches='tight')
 plt.close(fig)
