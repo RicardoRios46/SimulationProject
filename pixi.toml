@@ -21,7 +21,6 @@ dipy = "*"
 # Feature 2: Disimpy stack on Python 3.9
 [feature.disimpy.dependencies]
 python = "3.9.*"
-trimesh = "*"
 tomli = ">=2.2.1,<3"
 cudatoolkit = "11.8.*"
 
@@ -29,10 +28,16 @@ cudatoolkit = "11.8.*"
 disimpy = ">=0.3.0,<0.4"
 manifold3d = ">=3.5.1,<4"
 
+# Feature 3: Trimesh 
+[feature.trimesh.dependencies]
+python = "3.13.*"
+trimesh = "*"
+
 # Environment mapping
 [environments]
 default = ["dipy"]
 dipy-env = ["dipy"]
 disimpy-env = ["disimpy"]
+trimesh-env = ["trimesh"]
 
 [tasks]
