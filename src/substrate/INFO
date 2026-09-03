@@ -1,0 +1,4 @@
+These are scripts I used to generate the substrates, I dont not update often so some might not work with the new
+format. Just change variables to desired.
+
+-viewSub.py plots the substrate, easy to edit fig here without having to regenerate the substrate again.
