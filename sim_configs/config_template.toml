@@ -37,7 +37,7 @@ waveform_file = [
 ]
 
 # Rotation matrix file (applied to every waveform above), relative to rotations/
-direction_file = "directions_20.txt"
+rotation_file = "rotations_20.txt"
 
 # Target b-values (s/mm^2) to scale each waveform to. Must be non-negative;
 # a value of 0 is written directly with signal = 1.0 (no simulation needed).

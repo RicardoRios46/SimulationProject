@@ -10,7 +10,7 @@ diffusivity = 2e-9
 
 [waveform]
 waveform_file = ["pgse.csv", "oscillating.csv"]
-direction_file = "directions_20.txt"
+rotation_file = "rotations_20.txt"
 b_targets = [0, 500, 1000, 2000, 3000]
 
 [trajectory]

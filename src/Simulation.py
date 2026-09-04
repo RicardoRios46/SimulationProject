@@ -45,7 +45,7 @@ n_t = config["simulation"]["n_t"]
 periodic = config["substrate"]["periodic"]
 diffusivity = config["simulation"]["diffusivity"]
 waveforms = config["waveform"]["waveform_file"]
-directionFile = config["waveform"]["direction_file"]
+rotationFile = config["waveform"]["rotation_file"]
 b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
 
@@ -61,7 +61,7 @@ traj_enabled = traj_config.get("enabled", False)
 traj_n_walkers = traj_config.get("n_walkers", 10)
 
 #Load rotation matrix (applied to all waveforms)
-rotations = np.loadtxt(f"rotations/{directionFile}", comments="#")
+rotations = np.loadtxt(f"rotations/{rotationFile}", comments="#")
 rot_matrix = rotations.reshape(-1, 3, 3)
 
 #Generate unique output filename
