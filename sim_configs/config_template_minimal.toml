@@ -1,0 +1,18 @@
+[substrate]
+name = "example_substrate"
+periodic = true
+position = "intra"
+
+[simulation]
+n_walkers = 100000
+n_t = 1000
+diffusivity = 2e-9
+
+[waveform]
+waveform_file = ["waveforms/pgse.csv", "waveforms/oscillating.csv"]
+direction_file = "directions_20.txt"
+b_targets = [0, 500, 1000, 2000, 3000]
+
+[trajectory]
+enabled = false
+n_walkers = 10

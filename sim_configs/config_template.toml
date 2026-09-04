@@ -1,0 +1,53 @@
+# Template configuration file for simulation.py
+# Copy this file, rename it (the filename, without extension, becomes the
+# basename used for all output files), and edit the values below.
+
+[substrate]
+# Name of the substrate mesh. Expects the files:
+#   substrate/<name>/<name>_vertices.csv
+#   substrate/<name>/<name>_faces.csv
+name = "example_substrate"
+
+# Whether the substrate mesh is treated as periodic
+periodic = true
+
+# Initial walker position. Passed directly to disimpy's substrates.mesh(init_pos=...)
+position = "intra"
+
+[simulation]
+# Number of random walkers for the main signal simulation
+n_walkers = 100000
+
+# Number of simulation timesteps
+n_t = 1000
+
+# Diffusivity, in m^2/s
+diffusivity = 2e-9
+
+# Optional: fix the Monte Carlo seed for reproducibility.
+# If omitted, a random seed is generated each run (and recorded in the
+# output metadata JSON either way).
+# seed = 42
+
+[waveform]
+# One or more gradient waveform files (x,y,z CSV, MATLAB format)
+waveform_file = [
+    "waveforms/pgse.csv",
+    "waveforms/oscillating.csv",
+]
+
+# Rotation matrix file (applied to every waveform above), relative to rotations/
+direction_file = "directions_20.txt"
+
+# Target b-values (s/mm^2) to scale each waveform to. Must be non-negative;
+# a value of 0 is written directly with signal = 1.0 (no simulation needed).
+b_targets = [0, 500, 1000, 2000, 3000]
+
+[trajectory]
+# Optional block. If omitted entirely, trajectory output is disabled.
+# Set enabled = true to additionally run a small trajectory simulation
+# and write outputs/<config_name>_traj.csv
+enabled = false
+
+# Number of walkers to track in the trajectory simulation (only used if enabled = true)
+n_walkers = 10
