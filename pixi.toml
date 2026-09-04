@@ -17,11 +17,12 @@ python = "3.13.*"
 dipy = "*"
 matplotlib = "*"
 
-# Feature 2: Disimpy stack on Python 3.11
+# Feature 2: Disimpy stack on Python 3.9
 [feature.disimpy.dependencies]
-python = "3.11.*"
+python = "3.9.*"
 tomli = ">=2.2.1,<3"
 cudatoolkit = "11.8.*"
+numpy = "<2.0.0"
 
 [feature.disimpy.pypi-dependencies]
 disimpy = ">=0.3.0,<0.4"
