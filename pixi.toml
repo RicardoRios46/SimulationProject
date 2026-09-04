@@ -33,6 +33,10 @@ python = "3.13.*"
 trimesh = "*"
 matplotlib = "*"
 
+# task
+[feature.dipy.tasks]
+fitsGraph = { cmd = "python src/graphing.py outputs/{{ file }}", args = ["file"] }
+
 # Environment mapping
 [environments]
 default = ["dipy"]
