@@ -14,7 +14,6 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 from disimpy import gradients, simulations, substrates
-from dipy.core.sphere import fibonacci_sphere
 import pandas as pd
 import tomli
 import json
@@ -46,16 +45,13 @@ n_t = config["simulation"]["n_t"]
 periodic = config["substrate"]["periodic"]
 diffusivity = config["simulation"]["diffusivity"]
 waveforms = config["waveform"]["waveform_file"]
-eulerFile = config["waveform"]["direction_file"]
-fibFile = config["waveform"]["direction_file_fib"]
+directionFile = config["waveform"]["direction_file"]
 b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
 
-#Load rotation matrices
-rotations = np.loadtxt(f"rotations/{eulerFile}", comments="#")
-rotationsFib = np.loadtxt(f"rotations/{fibFile}", comments="#")
+#Load rotation matrix (applied to all waveforms)
+rotations = np.loadtxt(f"rotations/{directionFile}", comments="#")
 rot_matrix = rotations.reshape(-1, 3, 3)
-rot_matrixFib = rotationsFib.reshape(-1, 3, 3)
 
 #Generate unique output filename
 def get_unique_filepath(filepath):
@@ -151,12 +147,6 @@ metadata = []
 #Loop through gradient waveforms
 for filecount, file in enumerate(waveforms):
 
-    #Select rotation set
-    if filecount <= 2:
-        curr_matrix = rot_matrixFib
-    else:
-        curr_matrix = rot_matrix
-
     #Load gradient waveform
     x_grad, y_grad, z_grad = read_shape(file)
 
@@ -176,10 +166,10 @@ for filecount, file in enumerate(waveforms):
     print(f"Bval: {(gradients.calc_b(gradient,0.02e-3)*1e-6)[0]:.0f}")
 
     #Rotate gradient into all directions
-    gradient_final = np.zeros([len(curr_matrix), len(time_points), 3])
+    gradient_final = np.zeros([len(rot_matrix), len(time_points), 3])
 
-    for i in range(0, len(curr_matrix)):
-        rot_waveform = gradient @ curr_matrix[i].T
+    for i in range(0, len(rot_matrix)):
+        rot_waveform = gradient @ rot_matrix[i].T
         gradient_final[i, : , : ] = rot_waveform
 
     #Interpolate gradient to simulation timestep
@@ -191,8 +181,8 @@ for filecount, file in enumerate(waveforms):
     #Scale gradients to achieve target b-values
     for j, b in enumerate(b_targets):
         if b == 0:
-            for i in range(len(curr_matrix)):
-                metadata.append([file,filecount + 1,*curr_matrix[i].flatten(),b])
+            for i in range(len(rot_matrix)):
+                metadata.append([file,filecount + 1,*rot_matrix[i].flatten(),b])
             continue
 
         scale = np.sqrt(b / b_base[0])
@@ -202,8 +192,8 @@ for filecount, file in enumerate(waveforms):
         mega_gradient.append(scaled_gradient)
 
         #Store waveform metadata
-        for i in range(len(curr_matrix)):
-            metadata.append([file,filecount + 1,*curr_matrix[i].flatten(),b])
+        for i in range(len(rot_matrix)):
+            metadata.append([file,filecount + 1,*rot_matrix[i].flatten(),b])
 
 #Combine all gradients
 mega_gradient = np.concatenate(mega_gradient, axis=0)
