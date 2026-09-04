@@ -1,26 +1,25 @@
 [workspace]
 name = "mc_simulations"
 version = "0.1.0"
-description = "Environment specification for dipy (Python 3.13) and disimpy (Python 3.9)"
+description = "Environment specification for dipy (Python 3.13) and disimpy (Python 3.11)"
 authors = []
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 
-# Shared dependencies common to both environments
+# Shared dependencies
 [dependencies]
 numpy = "*"
-scipy = "*"
-matplotlib = "*"
 pandas = "*"
 
 # Feature 1: DIPY stack on Python 3.13
 [feature.dipy.dependencies]
 python = "3.13.*"
 dipy = "*"
+matplotlib = "*"
 
-# Feature 2: Disimpy stack on Python 3.9
+# Feature 2: Disimpy stack on Python 3.11
 [feature.disimpy.dependencies]
-python = "3.9.*"
+python = "3.11.*"
 tomli = ">=2.2.1,<3"
 cudatoolkit = "11.8.*"
 
@@ -28,10 +27,11 @@ cudatoolkit = "11.8.*"
 disimpy = ">=0.3.0,<0.4"
 manifold3d = ">=3.5.1,<4"
 
-# Feature 3: Trimesh 
+# Feature 3: Trimesh
 [feature.trimesh.dependencies]
 python = "3.13.*"
 trimesh = "*"
+matplotlib = "*"
 
 # Environment mapping
 [environments]
