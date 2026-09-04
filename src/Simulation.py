@@ -49,6 +49,11 @@ directionFile = config["waveform"]["direction_file"]
 b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
 
+#Trajectory simulation is optional, controlled via config
+traj_config = config.get("trajectory", {})
+traj_enabled = traj_config.get("enabled", False)
+traj_n_walkers = traj_config.get("n_walkers", 10)
+
 #Load rotation matrix (applied to all waveforms)
 rotations = np.loadtxt(f"rotations/{directionFile}", comments="#")
 rot_matrix = rotations.reshape(-1, 3, 3)
@@ -133,6 +138,8 @@ metadata_dict = {
     "position": position,
     "diffusivity": diffusivity,
     "b_targets": b_targets,
+    "trajectory_enabled": traj_enabled,
+    "trajectory_n_walkers": traj_n_walkers if traj_enabled else None,
 }
 
 with open(meta_filename, mode="w") as meta_f:
@@ -230,20 +237,23 @@ for row in metadata:
 signal_df = pd.DataFrame(csv_rows, columns=csv_columns)
 signal_df.to_csv(csv_filename, index=False)
 
-#Run trajectory sim
-traj_file = get_unique_filepath(
-    f"outputs/{config_name}_traj.csv"
-)
+#Run trajectory sim (optional, controlled via [trajectory] in the config)
+if traj_enabled:
+    traj_file = get_unique_filepath(
+        f"outputs/{config_name}_traj.csv"
+    )
 
-trajSignal = simulations.simulation(
-    n_walkers=10,
-    diffusivity=diffusivity,
-    gradient=mega_gradient,
-    dt=dt,
-    substrate=substrate,
-    seed=seed,
-    traj=traj_file
-)
+    trajSignal = simulations.simulation(
+        n_walkers=int(traj_n_walkers),
+        diffusivity=diffusivity,
+        gradient=mega_gradient,
+        dt=dt,
+        substrate=substrate,
+        seed=seed,
+        traj=traj_file
+    )
+else:
+    traj_file = None
 
 #Prit sim info
 print(f"# MC seed: {seed}\n")
@@ -253,3 +263,7 @@ print(f"# Position: {position}")
 print(f"# Diffusivity: {diffusivity}\n")
 print(f"Writing outputs to: {csv_filename}")
 print(f"Writing metadata to: {meta_filename}")
+if traj_enabled:
+    print(f"Writing trajectory to: {traj_file}")
+else:
+    print("Trajectory simulation skipped (disabled in config).")
