@@ -116,12 +116,12 @@ substrate = get_substrate(meshName)
 
 #Create unique signal output file
 csv_filename = get_unique_filepath(
-    f"outputs/{meshName}_signals_{config_name}.csv"
+    f"outputs/{config_name}.csv"
 )
 
 #Create unique metadata output file (kept separate from the CSV, since CSV has no standard comment syntax)
 meta_filename = get_unique_filepath(
-    f"outputs/{meshName}_signals_{config_name}_metadata.json"
+    f"outputs/{config_name}_metadata.json"
 )
 
 metadata_dict = {
@@ -232,7 +232,7 @@ signal_df.to_csv(csv_filename, index=False)
 
 #Run trajectory sim
 traj_file = get_unique_filepath(
-    f"outputs/traj_{meshName}_signals_{config_name}.csv"
+    f"outputs/{config_name}_traj.csv"
 )
 
 trajSignal = simulations.simulation(
