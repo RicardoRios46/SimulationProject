@@ -141,14 +141,7 @@ meta_filename = get_unique_filepath(
 metadata_dict = {
     "config_file": config_name,
     "mc_seed": int(seed),
-    "substrate": meshName,
-    "n_walkers": n_walkers,
-    "n_t": n_t,
-    "position": position,
-    "diffusivity": diffusivity,
-    "b_targets": b_targets,
-    "trajectory_enabled": traj_enabled,
-    "trajectory_n_walkers": traj_n_walkers if traj_enabled else None,
+    **config,
 }
 
 with open(meta_filename, mode="w") as meta_f:
