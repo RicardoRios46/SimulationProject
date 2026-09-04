@@ -11,18 +11,12 @@ SLURM usage:
 """
 
 import numpy as np
-from scipy.spatial.transform import Rotation as R
-import matplotlib.pyplot as plt
 from disimpy import gradients, simulations, substrates
 import pandas as pd
 import tomli
 import json
 import os
 import argparse
-
-#Generate random seed for simulation
-seed = np.random.randint(0, 2**32-1)
-print(seed)
 
 #Parse config file argument
 parser = argparse.ArgumentParser()
@@ -38,6 +32,12 @@ config_name,_ = os.path.splitext(config_name)
 with open(config_file_path, "rb") as f:
     config = tomli.load(f)
 
+#Use seed from config if provided, otherwise generate a random one
+seed = config["simulation"].get("seed")
+if seed is None:
+    seed = np.random.randint(0, 2**32-1)
+print(seed)
+
 #Params
 meshName = config["substrate"]["name"]
 n_walkers = config["simulation"]["n_walkers"]
@@ -48,6 +48,12 @@ waveforms = config["waveform"]["waveform_file"]
 directionFile = config["waveform"]["direction_file"]
 b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
+
+#Validate b_targets: must be a non-empty list of non-negative numbers
+if not b_targets:
+    raise ValueError("b_targets must contain at least one value.")
+if any(b < 0 for b in b_targets):
+    raise ValueError(f"b_targets must be non-negative. Got: {b_targets}")
 
 #Trajectory simulation is optional, controlled via config
 traj_config = config.get("trajectory", {})
@@ -119,6 +125,9 @@ def read_shape(filename):
 #Load substrate
 substrate = get_substrate(meshName)
 
+#Ensure the outputs directory exists (part of project structure, but guard anyway)
+os.makedirs("outputs", exist_ok=True)
+
 #Create unique signal output file
 csv_filename = get_unique_filepath(
     f"outputs/{config_name}.csv"
@@ -147,7 +156,6 @@ with open(meta_filename, mode="w") as meta_f:
 
 csv_columns = ["file", "waveform_idx", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33", "bval", "signal"]
 
-shape_signals = []
 mega_gradient = []
 metadata = []
 
@@ -194,7 +202,6 @@ for filecount, file in enumerate(waveforms):
 
         scale = np.sqrt(b / b_base[0])
         scaled_gradient = gradient_final * scale
-        b_vals = gradients.calc_b(scaled_gradient, dt) * 1e-6
 
         mega_gradient.append(scaled_gradient)
 
