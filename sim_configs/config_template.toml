@@ -30,10 +30,10 @@ diffusivity = 2e-9
 # seed = 42
 
 [waveform]
-# One or more gradient waveform files (x,y,z CSV, MATLAB format)
+# One or more gradient waveform files (x,y,z CSV, MATLAB format), relative to waveforms/
 waveform_file = [
-    "waveforms/pgse.csv",
-    "waveforms/oscillating.csv",
+    "pgse.csv",
+    "oscillating.csv",
 ]
 
 # Rotation matrix file (applied to every waveform above), relative to rotations/

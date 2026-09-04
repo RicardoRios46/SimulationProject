@@ -9,7 +9,7 @@ n_t = 1000
 diffusivity = 2e-9
 
 [waveform]
-waveform_file = ["waveforms/pgse.csv", "waveforms/oscillating.csv"]
+waveform_file = ["pgse.csv", "oscillating.csv"]
 direction_file = "directions_20.txt"
 b_targets = [0, 500, 1000, 2000, 3000]
 
