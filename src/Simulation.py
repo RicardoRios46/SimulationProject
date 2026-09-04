@@ -17,7 +17,7 @@ from disimpy import gradients, simulations, substrates
 from dipy.core.sphere import fibonacci_sphere
 import pandas as pd
 import tomli
-import csv
+import json
 import os
 import argparse
 
@@ -48,7 +48,7 @@ diffusivity = config["simulation"]["diffusivity"]
 waveforms = config["waveform"]["waveform_file"]
 eulerFile = config["waveform"]["direction_file"]
 fibFile = config["waveform"]["direction_file_fib"]
-b_num = config["waveform"]["num_b"]
+b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
 
 #Load rotation matrices
@@ -123,110 +123,122 @@ csv_filename = get_unique_filepath(
     f"outputs/{meshName}_signals_{config_name}.csv"
 )
 
-with open(csv_filename, mode="w", newline="") as f:
-    writer = csv.writer(f)
+#Create unique metadata output file (kept separate from the CSV, since CSV has no standard comment syntax)
+meta_filename = get_unique_filepath(
+    f"outputs/{meshName}_signals_{config_name}_metadata.json"
+)
 
-    #Write simulation metadata
-    f.write(f"# Config file used: {config_name}\n")
-    f.write(f"# MC seed: {seed}\n")
-    f.write(f"# Subtrate: {meshName}\n")
-    f.write(f"# Walkers: {n_walkers}. Steps: {n_t}\n")
-    f.write(f"# Position: {position}\n")
-    f.write(f"# Diffusivity: {diffusivity}\n")
+metadata_dict = {
+    "config_file": config_name,
+    "mc_seed": int(seed),
+    "substrate": meshName,
+    "n_walkers": n_walkers,
+    "n_t": n_t,
+    "position": position,
+    "diffusivity": diffusivity,
+    "b_targets": b_targets,
+}
 
-    writer.writerow(["file", "waveform_idx", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33", "bval", "signal"])
+with open(meta_filename, mode="w") as meta_f:
+    json.dump(metadata_dict, meta_f, indent=4)
 
-    shape_signals = []
-    mega_gradient = []
-    metadata = []
+csv_columns = ["file", "waveform_idx", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33", "bval", "signal"]
 
-    #Loop through gradient waveforms
-    for filecount, file in enumerate(waveforms):
+shape_signals = []
+mega_gradient = []
+metadata = []
 
-        #Select rotation set
-        if filecount <= 2:
-            curr_matrix = rot_matrixFib
-        else:
-            curr_matrix = rot_matrix
+#Loop through gradient waveforms
+for filecount, file in enumerate(waveforms):
 
-        #Load gradient waveform
-        x_grad, y_grad, z_grad = read_shape(file)
+    #Select rotation set
+    if filecount <= 2:
+        curr_matrix = rot_matrixFib
+    else:
+        curr_matrix = rot_matrix
 
-        time = len(x_grad)*0.02
-        time_points = np.arange(0,time,0.02)
+    #Load gradient waveform
+    x_grad, y_grad, z_grad = read_shape(file)
 
-        #Create gradient array
-        gradient = np.zeros([1,len(time_points),3])
+    time = len(x_grad)*0.02
+    time_points = np.arange(0,time,0.02)
 
-        gradient[0,:,0] = x_grad
-        gradient[0,:,1] = y_grad
-        gradient[0,:,2] = z_grad
+    #Create gradient array
+    gradient = np.zeros([1,len(time_points),3])
 
-        gradient *= 1e-3
+    gradient[0,:,0] = x_grad
+    gradient[0,:,1] = y_grad
+    gradient[0,:,2] = z_grad
 
-        #Calculate base b-value
-        print(f"Bval: {(gradients.calc_b(gradient,0.02e-3)*1e-6)[0]:.0f}")
+    gradient *= 1e-3
 
-        #Rotate gradient into all directions
-        gradient_final = np.zeros([len(curr_matrix), len(time_points), 3])
+    #Calculate base b-value
+    print(f"Bval: {(gradients.calc_b(gradient,0.02e-3)*1e-6)[0]:.0f}")
 
-        for i in range(0, len(curr_matrix)):
-            rot_waveform = gradient @ curr_matrix[i].T
-            gradient_final[i, : , : ] = rot_waveform
+    #Rotate gradient into all directions
+    gradient_final = np.zeros([len(curr_matrix), len(time_points), 3])
 
-        #Interpolate gradient to simulation timestep
-        gradient_final, dt = gradients.interpolate_gradient(gradient_final, 0.02e-3, int(n_t))
+    for i in range(0, len(curr_matrix)):
+        rot_waveform = gradient @ curr_matrix[i].T
+        gradient_final[i, : , : ] = rot_waveform
 
-        #Calculate base b-value and target b-values
-        b_base = (gradients.calc_b(gradient_final, dt) * 1e-6)
-        b_targets = np.linspace(0, 4500, b_num)
+    #Interpolate gradient to simulation timestep
+    gradient_final, dt = gradients.interpolate_gradient(gradient_final, 0.02e-3, int(n_t))
 
-        #Scale gradients to achieve target b-values
-        for j, b in enumerate(b_targets):
-            if b == 0:
-                for i in range(len(curr_matrix)):
-                    metadata.append([file,filecount + 1,*curr_matrix[i].flatten(),b])
-                continue
+    #Calculate base b-value and target b-values
+    b_base = (gradients.calc_b(gradient_final, dt) * 1e-6)
 
-            scale = np.sqrt(b / b_base[0])
-            scaled_gradient = gradient_final * scale
-            b_vals = gradients.calc_b(scaled_gradient, dt) * 1e-6
-
-            mega_gradient.append(scaled_gradient)
-
-            #Store waveform metadata
+    #Scale gradients to achieve target b-values
+    for j, b in enumerate(b_targets):
+        if b == 0:
             for i in range(len(curr_matrix)):
                 metadata.append([file,filecount + 1,*curr_matrix[i].flatten(),b])
+            continue
 
-    #Combine all gradients
-    mega_gradient = np.concatenate(mega_gradient, axis=0)
+        scale = np.sqrt(b / b_base[0])
+        scaled_gradient = gradient_final * scale
+        b_vals = gradients.calc_b(scaled_gradient, dt) * 1e-6
 
-    print("Mega gradient shape:", mega_gradient.shape)
-    print("Metadata entries:", len(metadata))
-    print(f"\n\nRunning mega simulation.")
+        mega_gradient.append(scaled_gradient)
 
-    #Run sim
-    signal = simulations.simulation(
-        n_walkers=int(n_walkers),
-        diffusivity=diffusivity,
-        gradient=mega_gradient,
-        dt=dt,
-        substrate=substrate,
-        seed=seed
-    )
+        #Store waveform metadata
+        for i in range(len(curr_matrix)):
+            metadata.append([file,filecount + 1,*curr_matrix[i].flatten(),b])
 
-    #Normalize signal by walker count
-    norm_signal = abs(signal / n_walkers)
+#Combine all gradients
+mega_gradient = np.concatenate(mega_gradient, axis=0)
 
-    signal_idx = 0
+print("Mega gradient shape:", mega_gradient.shape)
+print("Metadata entries:", len(metadata))
+print(f"\n\nRunning mega simulation.")
 
-    #Write signals to CSV
-    for row in metadata:
-        if row[-1] == 0:
-            writer.writerow([*row,1.0])
-        else:
-            writer.writerow([*row,norm_signal[signal_idx]])
-            signal_idx += 1
+#Run sim
+signal = simulations.simulation(
+    n_walkers=int(n_walkers),
+    diffusivity=diffusivity,
+    gradient=mega_gradient,
+    dt=dt,
+    substrate=substrate,
+    seed=seed
+)
+
+#Normalize signal by walker count
+norm_signal = abs(signal / n_walkers)
+
+signal_idx = 0
+
+#Assemble signal rows (b=0 rows get signal=1.0, others pull from norm_signal in order)
+csv_rows = []
+for row in metadata:
+    if row[-1] == 0:
+        csv_rows.append([*row, 1.0])
+    else:
+        csv_rows.append([*row, norm_signal[signal_idx]])
+        signal_idx += 1
+
+#Write signals to CSV via pandas
+signal_df = pd.DataFrame(csv_rows, columns=csv_columns)
+signal_df.to_csv(csv_filename, index=False)
 
 #Run trajectory sim
 traj_file = get_unique_filepath(
@@ -250,3 +262,4 @@ print(f"# Walkers: {n_walkers}. Steps: {n_t}")
 print(f"# Position: {position}")
 print(f"# Diffusivity: {diffusivity}\n")
 print(f"Writing outputs to: {csv_filename}")
+print(f"Writing metadata to: {meta_filename}")
