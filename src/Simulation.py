@@ -163,7 +163,7 @@ metadata = []
 for filecount, file in enumerate(waveforms):
 
     #Load gradient waveform
-    x_grad, y_grad, z_grad = read_shape(file)
+    x_grad, y_grad, z_grad = read_shape(f"waveforms/{file}")
 
     time = len(x_grad)*0.02
     time_points = np.arange(0,time,0.02)
