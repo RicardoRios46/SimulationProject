@@ -172,7 +172,7 @@ for name, param in paramList:
 
 #Plot walker trajectories if available
 try:
-    traj_file = f"outputs/traj_{graph_title}"
+    traj_file = f"outputs/{graph_title}_traj"
 
     print(traj_file)
 
