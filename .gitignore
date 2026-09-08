@@ -4,6 +4,8 @@
 /outputs
 /slurm_outputs
 /graphOutputs
+/substrate
+/sim_configs
 
 archive_Cole
 archive_Ricardo
