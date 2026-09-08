@@ -36,7 +36,7 @@ matplotlib = "*"
 
 # task
 [feature.dipy.tasks]
-fitsGraph = { cmd = "python src/graphing.py outputs/{{ file }}", args = ["file"] }
+fitsGraph = { cmd = "python src/graphing.py {{ file }}", args = ["file"] }
 
 # Environment mapping
 [environments]
