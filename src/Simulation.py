@@ -53,6 +53,11 @@ position = config["substrate"]["position"]
 #Defaults to 0.02 ms (20 us) if not specified in the config.
 raster_time = config["waveform"].get("raster_time_ms", 0.02)
 
+#Unit conversion factor applied to raw waveform values to get them into the
+#T/m units disimpy expects. Defaults to 1e-3 (waveform files assumed to be
+#in mT/m) if not specified in the config.
+gradient_scale = config["waveform"].get("gradient_scale", 1e-3)
+
 #Validate b_targets: must be a non-empty list of non-negative numbers
 if not b_targets:
     raise ValueError("b_targets must contain at least one value.")
@@ -195,7 +200,7 @@ for filecount, file in enumerate(waveforms):
     gradient[0,:,1] = y_grad
     gradient[0,:,2] = z_grad
 
-    gradient *= 1e-3
+    gradient *= gradient_scale
 
     #Calculate base b-value
     print(f"Bval: {(gradients.calc_b(gradient,raster_time*1e-3)*1e-6)[0]:.0f}")
