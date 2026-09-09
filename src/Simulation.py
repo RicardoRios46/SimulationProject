@@ -49,6 +49,10 @@ rotationFile = config["waveform"]["rotation_file"]
 b_targets = config["waveform"]["b_targets"]
 position = config["substrate"]["position"]
 
+#Sampling time step (ms) that the waveform CSV files were generated at.
+#Defaults to 0.02 ms (20 us) if not specified in the config.
+raster_time = config["waveform"].get("raster_time_ms", 0.02)
+
 #Validate b_targets: must be a non-empty list of non-negative numbers
 if not b_targets:
     raise ValueError("b_targets must contain at least one value.")
@@ -181,8 +185,8 @@ for filecount, file in enumerate(waveforms):
     #Load gradient waveform
     x_grad, y_grad, z_grad = read_shape(f"waveforms/{file}")
 
-    time = len(x_grad)*0.02
-    time_points = np.arange(0,time,0.02)
+    time = len(x_grad)*raster_time
+    time_points = np.arange(0,time,raster_time)
 
     #Create gradient array
     gradient = np.zeros([1,len(time_points),3])
@@ -194,7 +198,7 @@ for filecount, file in enumerate(waveforms):
     gradient *= 1e-3
 
     #Calculate base b-value
-    print(f"Bval: {(gradients.calc_b(gradient,0.02e-3)*1e-6)[0]:.0f}")
+    print(f"Bval: {(gradients.calc_b(gradient,raster_time*1e-3)*1e-6)[0]:.0f}")
 
     #Rotate gradient into all directions
     gradient_final = np.zeros([len(rot_matrix), len(time_points), 3])
@@ -204,7 +208,7 @@ for filecount, file in enumerate(waveforms):
         gradient_final[i, : , : ] = rot_waveform
 
     #Interpolate gradient to simulation timestep
-    gradient_final, dt = gradients.interpolate_gradient(gradient_final, 0.02e-3, int(n_t))
+    gradient_final, dt = gradients.interpolate_gradient(gradient_final, raster_time*1e-3, int(n_t))
 
     #Calculate base b-value and target b-values
     b_base = (gradients.calc_b(gradient_final, dt) * 1e-6)
