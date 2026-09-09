@@ -60,9 +60,32 @@ traj_config = config.get("trajectory", {})
 traj_enabled = traj_config.get("enabled", False)
 traj_n_walkers = traj_config.get("n_walkers", 10)
 
-#Load rotation matrix (applied to all waveforms)
-rotations = np.loadtxt(f"rotations/{rotationFile}", comments="#")
-rot_matrix = rotations.reshape(-1, 3, 3)
+#Normalize rotation_file into a list: accept either a single filename (str)
+#or a list of filenames. A single entry is broadcast to every waveform;
+#otherwise the list must have exactly one rotation file per waveform.
+if isinstance(rotationFile, str):
+    rotationFiles = [rotationFile]
+else:
+    rotationFiles = list(rotationFile)
+
+if len(rotationFiles) == 1:
+    rotationFiles = rotationFiles * len(waveforms)
+elif len(rotationFiles) != len(waveforms):
+    raise ValueError(
+        f"rotation_file must contain either 1 entry (applied to all waveforms) "
+        f"or exactly one entry per waveform. Got {len(rotationFiles)} rotation file(s) "
+        f"for {len(waveforms)} waveform(s)."
+    )
+
+#Load rotation matrices for each waveform, one rotation-matrix set per waveform.
+#Files are cached so the same rotation file isn't re-read from disk multiple times.
+_rot_matrix_cache = {}
+rot_matrices = []
+for rf in rotationFiles:
+    if rf not in _rot_matrix_cache:
+        rotations = np.loadtxt(f"rotations/{rf}", comments="#")
+        _rot_matrix_cache[rf] = rotations.reshape(-1, 3, 3)
+    rot_matrices.append(_rot_matrix_cache[rf])
 
 #Generate unique output filename
 def get_unique_filepath(filepath):
@@ -154,6 +177,10 @@ metadata = []
 
 #Loop through gradient waveforms
 for filecount, file in enumerate(waveforms):
+
+    #Rotation matrix set corresponding to this waveform (either its own
+    #dedicated rotation file, or the single shared one broadcast to all)
+    rot_matrix = rot_matrices[filecount]
 
     #Load gradient waveform
     x_grad, y_grad, z_grad = read_shape(f"waveforms/{file}")
