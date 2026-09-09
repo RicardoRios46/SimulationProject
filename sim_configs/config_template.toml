@@ -31,17 +31,32 @@ diffusivity = 2e-9
 
 [waveform]
 # One or more gradient waveform files (x,y,z CSV, MATLAB format), relative to waveforms/
+# Each file must be an N x 3 CSV (x,y,z columns).
 waveform_file = [
     "pgse.csv",
     "oscillating.csv",
 ]
 
-# Rotation matrix file (applied to every waveform above), relative to rotations/
+# Rotation matrix file(s), relative to rotations/.
+# Either a single filename, applied to every waveform above:
 rotation_file = "rotations_20.txt"
+# ...or a list with exactly one file per waveform listed in waveform_file,
+# applied in the same order:
+# rotation_file = ["rotations_20.txt", "rotations_40.txt"]
 
 # Target b-values (s/mm^2) to scale each waveform to. Must be non-negative;
 # a value of 0 is written directly with signal = 1.0 (no simulation needed).
 b_targets = [0, 500, 1000, 2000, 3000]
+
+# Optional: sampling time step (ms) that the waveform CSV files were
+# generated at (e.g. each row = 0.02 ms of the pulse sequence).
+# Defaults to 0.02 ms (20 us) if omitted.
+# raster_time_ms = 0.02
+
+# Optional: unit conversion factor applied to raw waveform values to get
+# them into the T/m units disimpy expects.
+# Defaults to 1e-3 (waveform files assumed to be in mT/m) if omitted.
+# gradient_scale = 1e-3
 
 [trajectory]
 # Optional block. If omitted entirely, trajectory output is disabled.

@@ -10,8 +10,18 @@ diffusivity = 2e-9
 
 [waveform]
 waveform_file = ["pgse.csv", "oscillating.csv"]
+
+
 rotation_file = "rotations_20.txt"
+# rotation_file = ["rotations_20.txt", "rotations_40.txt"]
+
 b_targets = [0, 500, 1000, 2000, 3000]
+
+# Optional. 0.02 ms (20 us) if omitted.
+# raster_time_ms = 0.02
+
+# Optional. Unit conversion applied to raw waveform values to get T/m. Defaults to 1e-3
+# gradient_scale = 1e-3
 
 [trajectory]
 enabled = false
