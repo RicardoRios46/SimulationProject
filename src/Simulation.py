@@ -123,27 +123,23 @@ def get_substrate(meshName):
 
 #Read gradient waveform from CSV
 def read_shape(filename):
-    """ 
-    Takes x,y,z CSV vaules from MATLAB. 
-    Returns x,y,z list of gradient values.
     """
-    x_grad = []
-    y_grad = []
-    z_grad = []
+    Reads an N x 3 CSV file of gradient waveform values (x,y,z per row),
+    as exported from MATLAB.
+    Returns x,y,z lists of gradient values.
+    """
+    data = np.loadtxt(filename, delimiter=',')
 
-    with open(filename) as f:
-        for line in f:
-            vals = line.strip().split(',')
-            if len(vals)>1:
-                x_grad.append(float(vals[0]))
-                y_grad.append(float(vals[1]))
-                z_grad.append(float(vals[2]))
-            else:
-                x_grad.append(float(vals[0]))
-                y_grad.append(0)
-                z_grad.append(0)
+    if data.ndim != 2 or data.shape[1] != 3:
+        raise ValueError(
+            f"{filename}: expected an N x 3 CSV (x,y,z columns), got shape {data.shape}."
+        )
 
-    return x_grad,y_grad,z_grad
+    x_grad = data[:, 0]
+    y_grad = data[:, 1]
+    z_grad = data[:, 2]
+
+    return x_grad, y_grad, z_grad
 
 #Load substrate
 substrate = get_substrate(meshName)
