@@ -162,18 +162,12 @@ csv_filename = get_unique_filepath(
 )
 
 #Create unique metadata output file (kept separate from the CSV, since CSV has no standard comment syntax)
+#NOTE: metadata is only written to disk after the simulation(s) below complete
+#successfully, so a failed run doesn't leave behind metadata for a signal
+#file that was never produced.
 meta_filename = get_unique_filepath(
     f"outputs/{config_name}_metadata.json"
 )
-
-metadata_dict = {
-    "config_file": config_name,
-    "mc_seed": int(seed),
-    **config,
-}
-
-with open(meta_filename, mode="w") as meta_f:
-    json.dump(metadata_dict, meta_f, indent=4)
 
 csv_columns = ["file", "waveform_idx", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33", "bval", "signal"]
 
@@ -286,6 +280,17 @@ if traj_enabled:
     )
 else:
     traj_file = None
+
+#Both the main simulation and (if enabled) the trajectory simulation completed
+#successfully at this point, so it's safe to write out the run's metadata.
+metadata_dict = {
+    "config_file": config_name,
+    "mc_seed": int(seed),
+    **config,
+}
+
+with open(meta_filename, mode="w") as meta_f:
+    json.dump(metadata_dict, meta_f, indent=4)
 
 #Prit sim info
 print(f"# MC seed: {seed}\n")
