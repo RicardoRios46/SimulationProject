@@ -1,7 +1,7 @@
 [workspace]
 name = "mc_simulations"
 version = "0.1.0"
-description = "Environment specification for dipy (Python 3.13) and disimpy (Python 3.11)"
+description = "Environments for substrate generation (trimesh, Python 3.13), MC simulations (disimpy, Python 3.9) and analysis (dipy, Python 3.13)"
 authors = []
 channels = ["conda-forge"]
 platforms = ["linux-64"]
@@ -26,13 +26,16 @@ numpy = "<2.0.0"
 
 [feature.disimpy.pypi-dependencies]
 disimpy = ">=0.3.0,<0.4"
-manifold3d = ">=3.5.1,<4"
 
 # Feature 3: Trimesh
 [feature.trimesh.dependencies]
 python = "3.13.*"
 trimesh = "*"
 matplotlib = "*"
+
+[feature.trimesh.pypi-dependencies]
+# Needed for trimesh.boolean.union(..., engine="manifold") in the substrate scripts
+manifold3d = ">=3.5.1,<4"
 
 # task
 [feature.dipy.tasks]
