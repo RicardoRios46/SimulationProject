@@ -161,13 +161,13 @@ csv_filename = get_unique_filepath(
     f"outputs/{config_name}.csv"
 )
 
-#Create unique metadata output file (kept separate from the CSV, since CSV has no standard comment syntax)
+#Metadata output file (kept separate from the CSV, since CSV has no standard comment syntax).
+#Named after the signal file actually written (e.g. outputs/run_1.csv ->
+#outputs/run_1_metadata.json) so the pair always matches.
 #NOTE: metadata is only written to disk after the simulation(s) below complete
 #successfully, so a failed run doesn't leave behind metadata for a signal
 #file that was never produced.
-meta_filename = get_unique_filepath(
-    f"outputs/{config_name}_metadata.json"
-)
+meta_filename = f"{os.path.splitext(csv_filename)[0]}_metadata.json"
 
 csv_columns = ["file", "waveform_idx", "R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33", "bval", "signal"]
 
@@ -265,9 +265,10 @@ signal_df.to_csv(csv_filename, index=False)
 
 #Run trajectory sim (optional, controlled via [trajectory] in the config)
 if traj_enabled:
-    traj_file = get_unique_filepath(
-        f"outputs/{config_name}_traj.csv"
-    )
+    #Name the trajectory file after the signal file actually written (e.g.
+    #outputs/run_1.csv -> outputs/run_1_traj.csv) so the pair always matches,
+    #even when earlier runs of the same config had trajectories disabled.
+    traj_file = f"{os.path.splitext(csv_filename)[0]}_traj.csv"
 
     trajSignal = simulations.simulation(
         n_walkers=int(traj_n_walkers),

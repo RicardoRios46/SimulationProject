@@ -170,11 +170,15 @@ for name, param in paramList:
     plt.savefig(f"{output}/{name}_{graph_title}.svg", dpi=300)
     plt.close(fig)
 
-#Plot walker trajectories if available
-try:
-    traj_file = f"outputs/{graph_title}_traj"
+#Plot walker trajectories if available.
+#Simulation.py writes the trajectory next to the signal file, named after it:
+#outputs/<signal>.csv -> outputs/<signal>_traj.csv
+traj_file = f"{os.path.splitext(signal_file)[0]}_traj.csv"
 
-    print(traj_file)
+if not os.path.exists(traj_file):
+    print("No trajectory file found, skipping trajectory plot")
+else:
+    print(f"Trajectory file: {traj_file}")
 
     data = np.loadtxt(traj_file)
 
@@ -188,8 +192,8 @@ try:
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111, projection='3d')
 
-    #Plot first 10 walkers
-    for i in range(10):
+    #Plot up to the first 10 walkers
+    for i in range(min(10, n_walkers)):
         ax.plot(traj[i, :, 0],traj[i, :, 1],traj[i, :, 2],alpha=0.7,linewidth=0.3)
 
     ax.view_init(elev=0, azim=0)
@@ -201,9 +205,6 @@ try:
 
     plt.savefig(f"{output}/traj_{graph_title}.png", dpi=300)
     plt.close()
-
-except:
-    print("no traj file found")
 
 #Load data for DKI fit
 csv_file = args.signals

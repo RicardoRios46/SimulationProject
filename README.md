@@ -228,14 +228,16 @@ the resource requests. For very large simulations (e.g. 1 million walkers with
 
 ## Simulation Outputs
 
-Outputs are written to `outputs/`, named after the config file. Existing files
-are never overwritten: a numeric suffix (`_1`, `_2`, ...) is added instead.
+Outputs are written to `outputs/`, named after the config file. Existing signal
+files are never overwritten: a numeric suffix (`_1`, `_2`, ...) is added
+instead, and the metadata and trajectory files of that run take the same name
+(`<signal>` below), so all files from one run always share a prefix.
 
 | File                               | Contents                                                        |
 |------------------------------------|-----------------------------------------------------------------|
 | `<config>.csv`                     | Signals, one row per waveform × rotation × b-value              |
-| `<config>_metadata.json`           | The full config plus the Monte Carlo seed used                  |
-| `<config>_traj.csv`                | Walker trajectories (only if `[trajectory] enabled = true`)     |
+| `<signal>_metadata.json`           | The full config plus the Monte Carlo seed used. Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_metadata.json` |
+| `<signal>_traj.csv`                | Walker trajectories (only if `[trajectory] enabled = true`). Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_traj.csv` |
 
 The signal CSV has the columns:
 
