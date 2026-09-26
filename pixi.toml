@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Environments for substrate generation (trimesh, Python 3.13), MC simulations (disimpy, Python 3.9) and analysis (dipy, Python 3.13)"
 authors = []
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", "win-64"]
 
 # Shared dependencies
 [dependencies]

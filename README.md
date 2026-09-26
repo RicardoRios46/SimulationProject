@@ -48,8 +48,15 @@ Install [Pixi](https://pixi.sh/) if needed:
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-The environments are defined for `linux-64` only. Running simulations requires
-an NVIDIA GPU with CUDA support (disimpy uses CUDA through Numba).
+The environments are defined for Linux (`linux-64`) and Windows (`win-64`).
+Running simulations requires an NVIDIA GPU with CUDA support (disimpy uses
+CUDA through Numba).
+
+Simulations are meant to be run on the Linux cluster. `disimpy-env` is pinned
+to older packages (Python 3.9, `numpy<2`, CUDA 11.8) because that is the
+configuration disimpy currently runs with, and these versions do not support
+recent GPUs (e.g. RTX 50-series). On Windows, use the environments for
+creating substrates and running the analysis.
 
 ## Environments
 
