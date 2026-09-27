@@ -217,21 +217,41 @@ gradient array and simulated in one disimpy run.
 
 ### SLURM
 
-Two batch scripts are provided in `batch/`:
+Two batch scripts are provided in `batch/`. **Always submit from the project
+root**: jobs run in the directory `sbatch` was called from, and logs are
+written to `slurm_outputs/`.
 
-- `sbatch.sh`: runs a single config (set the `config` variable)
-- `array_sbatch.sh`: runs several configs as a job array. List them in the
-  `configs` array and set `#SBATCH --array=0-<N-1>` to match the number of configs
+#### Single config: `sbatch.sh`
+
+Pass the config file as an argument:
 
 ```bash
-sbatch batch/sbatch.sh
-sbatch batch/array_sbatch.sh
+sbatch batch/sbatch.sh sim_configs/<config>.toml
 ```
 
-Before submitting, edit the scripts for your cluster: the working directory
-(`cd ...`), the `--output` log path (`slurm_outputs/`), the `--partition`, and
-the resource requests. For very large simulations (e.g. 1 million walkers with
-100k time steps), increase `--mem`.
+The log is written to `slurm_outputs/slurm-<jobid>.out`.
+
+The `#SBATCH` values in the script are defaults (partition `hx`, 1 GPU, 4 CPUs,
+32 GB memory, 12 h). Override them on the command line instead of editing the
+script:
+
+```bash
+sbatch -p vx --mem=64G --time=24:00:00 batch/sbatch.sh sim_configs/<config>.toml
+```
+
+The available partitions are `hx` (default, more GPUs available) and `vx`. For
+very large simulations (e.g. 1 million walkers with 100k time steps), increase
+`--mem`.
+
+#### Multiple configs: `array_sbatch.sh`
+
+Runs several configs as a job array. List them in the `configs` array and set
+`#SBATCH --array=0-<N-1>` to match the number of configs. Before submitting,
+edit the working directory (`cd ...`) and the `--output` log path in the script.
+
+```bash
+sbatch batch/array_sbatch.sh
+```
 
 ## Simulation Outputs
 
