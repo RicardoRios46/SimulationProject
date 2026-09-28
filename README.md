@@ -123,7 +123,7 @@ The scripts in `src/substrate/` build meshes with trimesh and write them to
 | `spheres.py`                    | Randomly packed spheres, gamma or fixed radius              | Config file           |
 | `single_spheres.py`             | One single-sphere substrate per radius                      | Config file           |
 | `substrateCATERPillar.py`       | Converts a CATERPillar output file to a mesh (see below)    | Variables in script   |
-| `viewSub.py`                    | Re-plots an existing substrate without regenerating it      | Variables in script   |
+| `view_substrate.py`             | Re-plots an existing substrate (see below)                  | Command-line options  |
 | `single_axon.py`                | Single beaded axon                                          | Variables in script   |
 | `substrate_beaded_axon_SA.py`   | Beaded axon bundles at matched surface area                 | Variables in script   |
 | `substrate_beaded_axon_V.py`    | Beaded axon bundles at matched volume                       | Variables in script   |
@@ -216,6 +216,22 @@ substrate:
 - `script`, `config_file`, `created` and `git_commit`: the generator script, the
   config file, the date, and the git commit of the project (marked `-dirty` if
   there were uncommitted changes)
+
+### Viewing a substrate
+
+`view_substrate.py` re-plots an existing substrate without regenerating it,
+e.g. to try other viewing angles or to get an SVG for a figure:
+
+```bash
+pixi run -e trimesh-env python src/substrate/view_substrate.py <name> [--elev 20] [--azim 45] [--output fig.png]
+```
+
+| Option              | Description                                                        |
+|---------------------|--------------------------------------------------------------------|
+| `--output`          | Output file, the extension sets the format (default `substrate/<name>/<name>_view.svg`) |
+| `--title`           | Figure title (default: the substrate name)                         |
+| `--elev`, `--azim`  | Viewing angles in degrees                                          |
+| `--no-equal-aspect` | Do not scale the axes equally (useful for long cylinders)          |
 
 ### CATERPillar substrates
 

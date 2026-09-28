@@ -245,8 +245,12 @@ def to_json(value):
     return value
 
 
-def plot_mesh(mesh, path, title, equal_aspect=True):
-    """Save a 3D preview of a mesh (in µm), with equal axis scaling unless equal_aspect=False."""
+def plot_mesh(mesh, path, title, equal_aspect=True, elev=None, azim=None):
+    """
+    Save a 3D preview of a mesh (in µm), with equal axis scaling unless
+    equal_aspect=False. elev and azim set the viewing angles in degrees
+    (matplotlib defaults if None).
+    """
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -262,6 +266,7 @@ def plot_mesh(mesh, path, title, equal_aspect=True):
 
     if equal_aspect:
         ax.set_box_aspect(np.ptp(mesh.vertices, axis=0))
+    ax.view_init(elev=elev, azim=azim)
     ax.set_xlabel("X (µm)")
     ax.set_ylabel("Y (µm)")
     ax.set_zlabel("Z (µm)")
