@@ -124,9 +124,6 @@ The scripts in `src/substrate/` build meshes with trimesh and write them to
 | `single_spheres.py`             | One single-sphere substrate per radius                      | Config file           |
 | `caterpillar.py`                | Converts a CATERPillar output file to a mesh (see below)    | Config file           |
 | `view_substrate.py`             | Re-plots an existing substrate (see below)                  | Command-line options  |
-| `single_axon.py`                | Single beaded axon                                          | Variables in script   |
-| `substrate_beaded_axon_SA.py`   | Beaded axon bundles at matched surface area                 | Variables in script   |
-| `substrate_beaded_axon_V.py`    | Beaded axon bundles at matched volume                       | Variables in script   |
 
 The scripts marked "Config file" use the shared helpers in
 `src/substrate/common.py` and read their parameters from a TOML config file
@@ -143,15 +140,11 @@ stay local, and the parameters of each substrate are saved in its
 `<name>_params.json`. Unknown keys (e.g. a typo) and missing required keys are
 reported as errors before anything is generated.
 
-The other scripts take their parameters from variables at the top of the
-script:
-
-```bash
-pixi run -e trimesh-env python src/substrate/<script>.py
-```
-
-The beaded axon scripts (`single_axon.py`, `substrate_beaded_axon_*.py`) are
-not currently maintained and may need adjustments to work.
+`src/substrate/archive/` keeps older generators that are not currently used
+or maintained, for reference: the beaded axon scripts (`single_axon.py`,
+`substrate_beaded_axon_SA.py`, `substrate_beaded_axon_V.py`). They take their
+parameters from variables at the top of each script, do not use the config
+files or `common.py`, and may need adjustments to work.
 
 #### Random packing: `cylinders.py`, `spheres.py`
 
