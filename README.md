@@ -106,16 +106,15 @@ substrate/<name>/<name>_faces.csv      # triangle vertex indices (with header)
 ```
 
 Vertex coordinates must be in **meters** (the generator scripts build meshes in
-µm and scale them by `1e-6` before saving). The generator scripts also save a
-`<name>_mesh.png` preview in the same folder.
+µm and scale them by `1e-6` before saving).
 
 Any mesh can be used as long as it is converted to this vertex/face CSV format.
 
 ### Generating substrates
 
 The scripts in `src/substrate/` build meshes with trimesh and write them to
-`substrate/<name>/`. Parameters (radii, spacing, packing, output name, ...) are
-set by editing the variables at the top of each script. Run them with:
+`substrate/<name>/`. Parameters are set by editing the values at the top of
+each script. Run them from the project root with:
 
 ```bash
 pixi run -e trimesh-env python src/substrate/<script>.py
@@ -123,17 +122,69 @@ pixi run -e trimesh-env python src/substrate/<script>.py
 
 | Script                          | Substrate                                                        |
 |---------------------------------|------------------------------------------------------------------|
-| `substrateCylinder.py`          | Packed cylinders, gamma or uniform radius distribution          |
+| `cylinders.py`                  | Randomly packed parallel cylinders, gamma or fixed radius        |
+| `spheres.py`                    | Randomly packed spheres, gamma or fixed radius                   |
 | `substrateSphere.py`            | Single spheres over a range of radii                             |
-| `randomSpheres.py`              | Randomly packed spheres, gamma radius distribution               |
 | `single_axon.py`                | Single beaded axon                                               |
 | `substrate_beaded_axon_SA.py`   | Beaded axons at matched surface area                             |
 | `substrate_beaded_axon_V.py`    | Beaded axons at matched volume                                   |
 | `substrateCATERPillar.py`       | Converts a CATERPillar output file to a mesh (see below)         |
 | `viewSub.py`                    | Re-plots an existing substrate without regenerating it           |
 
-These scripts are not updated often, so some may need small adjustments to
-work with the current format.
+`cylinders.py` and `spheres.py` use the shared helpers in
+`src/substrate/common.py`. The other scripts have not been updated to this
+format yet, and some may need small adjustments to work.
+
+#### Parameters (`cylinders.py`, `spheres.py`)
+
+Parameters are defined in a `params` dictionary at the top of the script. All
+lengths are in µm.
+
+| Parameter                  | Description                                                          |
+|----------------------------|----------------------------------------------------------------------|
+| `name`                     | Substrate name. `None` builds it from the parameters (see below)     |
+| `seed`                     | Random seed. The same parameters and seed give the same substrate    |
+| `n_objects`                | Number of cylinders/spheres to place                                 |
+| `domain_size`              | Side of the square (cylinders, xy) or cube (spheres) objects are centered in |
+| `min_gap`                  | Minimum gap between object surfaces                                  |
+| `radius_distribution`      | `"gamma"` or `"fixed"`                                               |
+| `gamma_shape`, `gamma_scale` | Gamma distribution of the radii                                    |
+| `radius_min`, `radius_max` | Gamma radii outside this range are redrawn (truncated distribution)  |
+| `radius_fixed`             | Radius of every object when `radius_distribution = "fixed"`          |
+| `max_attempts`             | Random positions tried per object before it is skipped               |
+| `max_consecutive_failures` | Stop after this many objects in a row could not be placed            |
+| `cylinder_length`          | Cylinder length along z (`cylinders.py` only)                        |
+
+Objects are placed one at a time at random non-overlapping positions. When
+the domain fills up, some objects cannot be placed and are skipped, so fewer
+than `n_objects` may be placed. Placement can also be stopped with Ctrl+C,
+and the objects placed so far are saved.
+
+#### Outputs
+
+Each substrate is saved to `substrate/<name>/`:
+
+| File                        | Contents                                                          |
+|-----------------------------|-------------------------------------------------------------------|
+| `<name>_vertices.csv`, `<name>_faces.csv` | Mesh in meters (simulation input)                   |
+| `<name>_params.json`        | Parameters used, achieved results and provenance (see below)      |
+| `<name>_mesh.png`           | 3D preview (µm)                                                    |
+| `<name>_radii.png`          | Histogram of the placed radii                                      |
+| `<name>_cross_section.png`  | Top view of the cylinder packing (`cylinders.py` only)            |
+
+`<name>_params.json` records everything needed to trace back or regenerate a
+substrate:
+
+- `params`: the full parameter dictionary, including the seed
+- `results`: the number of objects actually placed, the volume fraction
+  (spheres) or area fraction (cylinders), and the mean, std, min and max radius
+- `script`, `created` and `git_commit`: the generator script, the date, and the
+  git commit of the project (marked `-dirty` if there were uncommitted changes)
+
+When `name` is `None`, the name is built from the parameters and the number
+of objects actually placed, with `p` as decimal point, e.g.
+`cylinders_2840_gamma_shape0p75_scale0p55_gap0p45` or
+`spheres_500_fixed_r5_gap1`.
 
 ### CATERPillar substrates
 
@@ -357,7 +408,7 @@ Results are saved in `graphOutputs/<signal_file>/`:
 
 ```bash
 # 1. Create a substrate (edit parameters in the script first)
-pixi run -e trimesh-env python src/substrate/substrateCylinder.py
+pixi run -e trimesh-env python src/substrate/cylinders.py
 
 # 2. Create a config from the template
 cp sim_configs/config_template.toml sim_configs/my_run.toml
