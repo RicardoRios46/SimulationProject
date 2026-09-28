@@ -245,12 +245,46 @@ very large simulations (e.g. 1 million walkers with 100k time steps), increase
 
 #### Multiple configs: `array_sbatch.sh`
 
-Runs several configs as a job array. List them in the `configs` array and set
-`#SBATCH --array=0-<N-1>` to match the number of configs. Before submitting,
-edit the working directory (`cd ...`) and the `--output` log path in the script.
+Runs several configs as a job array, one config per task. Write a list file
+with one config path per line (relative to the project root). Blank lines and
+lines starting with `#` are ignored, so you can comment out configs to skip
+them:
+
+```text
+# sim_configs/sweep_radius.txt
+sim_configs/cyl_r0.5.toml
+sim_configs/cyl_r1.0.toml
+# sim_configs/cyl_r1.5.toml
+sim_configs/cyl_r2.0.toml
+```
+
+Submit it with the wrapper `submit_array.sh`, which checks that every config in
+the list exists and sets the array size automatically:
 
 ```bash
-sbatch batch/array_sbatch.sh
+bash batch/submit_array.sh sim_configs/sweep_radius.txt
+```
+
+Wrapper options:
+
+| Option             | Description                                                   |
+|--------------------|---------------------------------------------------------------|
+| `--max-parallel K` | Run at most K tasks at the same time                          |
+| `--dry-run`        | Check the list and print the `sbatch` command without submitting |
+| anything else      | Passed to `sbatch`, e.g. `-p vx --mem=64G --time=24:00:00`    |
+
+```bash
+bash batch/submit_array.sh sim_configs/sweep_radius.txt --max-parallel 4 -p vx
+```
+
+Each task writes its log to `slurm_outputs/slurm-<arrayjobid>_<task>.out`,
+where `<task>` is the config's position in the list (starting from 0).
+
+`array_sbatch.sh` can also be submitted directly. In that case `--array` must
+be `0-<N-1>` for N configs in the list:
+
+```bash
+sbatch --array=0-2 batch/array_sbatch.sh sim_configs/sweep_radius.txt
 ```
 
 ## Simulation Outputs
