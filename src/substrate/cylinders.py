@@ -1,36 +1,23 @@
 """
 Randomly packed, non-overlapping parallel cylinders along z in a square domain.
 
-Edit `params` below, then run from the project root:
-    pixi run -e trimesh-env python src/substrate/cylinders.py
+Usage (from the project root):
+    pixi run -e trimesh-env python src/substrate/cylinders.py substrate_configs/<config>.toml
 
-Outputs go to substrate/<name>/ (see common.py), including <name>_params.json
-with the parameters used. The name is built from the parameters and the
-number of cylinders actually placed, unless params["name"] is set.
+Start from substrate_configs/cylinders_template.toml. Outputs go to
+substrate/<name>/ (see common.py), including <name>_params.json with the
+parameters used.
 """
 
 import numpy as np
 import trimesh
 
-from common import sample_radii, place_objects, radius_name, format_value, save_substrate, plot_cross_section
+from common import load_params, sample_radii, place_objects, radius_name, format_value, save_substrate, plot_cross_section
 
-# All lengths in µm
-params = {
-    "name": None,                     # None = build name from parameters
-    "seed": 123,
-    "n_objects": 3000,                # Number of cylinders to place
-    "domain_size": 120,               # Side of the square (xy) cylinder axes are placed in
-    "min_gap": 0.45,                  # Minimum gap between cylinder surfaces
-    "cylinder_length": 1000,          # Length along z
-    "radius_distribution": "gamma",   # "gamma" or "fixed"
-    "gamma_shape": 0.75,
-    "gamma_scale": 0.55,
-    "radius_min": 0.2,
-    "radius_max": 3,
-    "radius_fixed": 0.5,              # Only used if radius_distribution = "fixed"
-    "max_attempts": 2000,
-    "max_consecutive_failures": 100,
-}
+params, config_path = load_params(
+    "Generate a substrate of randomly packed parallel cylinders.",
+    required=["n_objects", "domain_size", "min_gap", "cylinder_length", "radius_distribution"],
+)
 
 rng = np.random.default_rng(params["seed"])
 
@@ -53,6 +40,7 @@ results = {
 
 # Cylinders are much longer than the domain is wide, so the 3D preview is not
 # scaled equally, and a cross-section shows the packing
-output_dir = save_substrate(mesh, name, params, results, radii, "Random non-overlapping cylinders", equal_aspect=False)
+output_dir = save_substrate(mesh, name, params, results, radii, "Random non-overlapping cylinders",
+                            config_path, equal_aspect=False)
 plot_cross_section(centers, radii, params["domain_size"], f"{output_dir}/{name}_cross_section.png",
                    "Random non-overlapping cylinders: cross-section")

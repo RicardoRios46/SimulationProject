@@ -2,11 +2,13 @@
 Shared helpers for the substrate generator scripts.
 
 Conventions used by all generators:
-- Parameters are defined in a `params` dict at the top of each script.
-- All lengths in `params` are in micrometers (µm). Meshes are built in µm and
+- Parameters are read from a TOML config file given on the command line
+  (see load_params() and the templates in substrate_configs/).
+- All lengths are in micrometers (µm). Meshes are built in µm and
   converted to meters only when saved, as the simulation expects.
 - Common parameter names:
-    seed                      Random seed (always recorded)
+    name                      Substrate name (optional, built from parameters if omitted)
+    seed                      Random seed (optional, random if omitted; always recorded)
     n_objects                 Number of objects to place
     domain_size               Side length of the placement area/volume (µm)
     min_gap                   Minimum gap between object surfaces (µm)
@@ -28,12 +30,71 @@ Outputs of save_substrate(), in substrate/<name>/:
 import os
 import sys
 import json
+import argparse
+import tomllib
 import subprocess
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# Keys every generator accepts. Required keys are added by each script.
+OPTIONAL_DEFAULTS = {
+    "name": None,
+    "seed": None,
+    "max_attempts": 2000,
+    "max_consecutive_failures": 100,
+}
+RADIUS_KEYS = {
+    "gamma": ["gamma_shape", "gamma_scale", "radius_min", "radius_max"],
+    "fixed": ["radius_fixed"],
+}
+
+
+def load_params(description, required):
+    """
+    Read the substrate config TOML file given on the command line.
+
+    `required` lists the keys the script needs besides the radius keys, which
+    depend on radius_distribution (see RADIUS_KEYS). Optional keys not in the
+    file take their value from OPTIONAL_DEFAULTS. Unknown keys are an error,
+    to catch typos. If no seed is given, a random one is generated.
+
+    Returns (params, config_path).
+    """
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("config", help="Substrate config file (.toml), e.g. substrate_configs/<name>.toml")
+    config_path = parser.parse_args().config
+
+    with open(config_path, "rb") as f:
+        config = tomllib.load(f)
+
+    distribution = config.get("radius_distribution")
+    if distribution not in RADIUS_KEYS:
+        raise ValueError(f"{config_path}: radius_distribution must be one of {list(RADIUS_KEYS)}, got {distribution!r}")
+
+    all_radius_keys = [key for keys in RADIUS_KEYS.values() for key in keys]
+    allowed = set(required) | set(OPTIONAL_DEFAULTS) | set(all_radius_keys)
+
+    unknown = sorted(set(config) - allowed)
+    if unknown:
+        raise ValueError(f"{config_path}: unknown parameter(s) {unknown}")
+
+    missing = [key for key in list(required) + RADIUS_KEYS[distribution] if key not in config]
+    if missing:
+        raise ValueError(f"{config_path}: missing parameter(s) {missing}")
+
+    if distribution == "gamma" and config["radius_min"] >= config["radius_max"]:
+        raise ValueError(f"{config_path}: radius_min must be smaller than radius_max")
+
+    params = {**OPTIONAL_DEFAULTS, **config}
+
+    if params["seed"] is None:
+        params["seed"] = int(np.random.default_rng().integers(2**32))
+        print(f"No seed given, using random seed {params['seed']}")
+
+    return params, config_path
 
 
 def sample_radii(rng, n, params):
@@ -221,7 +282,7 @@ def plot_radii(radii, path, title):
     plt.close(fig)
 
 
-def save_substrate(mesh, name, params, results, radii, title, equal_aspect=True):
+def save_substrate(mesh, name, params, results, radii, title, config_path, equal_aspect=True):
     """
     Save a substrate built in µm to substrate/<name>/: mesh CSVs (in meters),
     preview images, and a params JSON with inputs, results and provenance.
@@ -254,6 +315,7 @@ def save_substrate(mesh, name, params, results, radii, title, equal_aspect=True)
     record = {
         "substrate_name": name,
         "script": os.path.basename(sys.argv[0]),
+        "config_file": config_path,
         "created": datetime.now().isoformat(timespec="seconds"),
         "git_commit": git_commit(),
         "units": "Parameters and results in µm; mesh CSVs in meters",

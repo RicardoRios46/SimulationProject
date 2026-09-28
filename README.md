@@ -19,6 +19,7 @@ The project uses:
 ├── CATERPillar_inputs/     # Raw CATERPillar outputs used to build substrates
 ├── rotations/              # Rotation matrix sets applied to each waveform
 ├── sim_configs/            # Simulation configuration files (TOML) + templates
+├── substrate_configs/      # Substrate generator configuration files (TOML) + templates
 ├── slurm_outputs/          # SLURM log files
 ├── src/
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
@@ -89,6 +90,7 @@ which does not include disimpy.
 
 ```text
 1. Create substrate      trimesh-env   src/substrate/*.py     -> substrate/<name>/
+                                        (+ substrate_configs/<config>.toml)
 2. Write config          -             sim_configs/<config>.toml
 3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>.csv
 4. Analyze signals       dipy-env      src/graphing.py        -> graphOutputs/<config>.csv/
@@ -113,8 +115,23 @@ Any mesh can be used as long as it is converted to this vertex/face CSV format.
 ### Generating substrates
 
 The scripts in `src/substrate/` build meshes with trimesh and write them to
-`substrate/<name>/`. Parameters are set by editing the values at the top of
-each script. Run them from the project root with:
+`substrate/<name>/`. Run them from the project root.
+
+`cylinders.py` and `spheres.py` read their parameters from a TOML config file
+in `substrate_configs/`. Copy a template, edit it, and pass it to the script:
+
+```bash
+cp substrate_configs/cylinders_template.toml substrate_configs/my_cylinders.toml
+pixi run -e trimesh-env python src/substrate/cylinders.py substrate_configs/my_cylinders.toml
+```
+
+Templates: `substrate_configs/cylinders_template.toml` and
+`substrate_configs/spheres_template.toml`. Like `sim_configs/`, only the
+templates are version-controlled. Your own configs stay local, and the
+parameters of each substrate are saved in its `<name>_params.json`.
+
+The other scripts still take their parameters from variables at the top of
+the script:
 
 ```bash
 pixi run -e trimesh-env python src/substrate/<script>.py
@@ -135,15 +152,15 @@ pixi run -e trimesh-env python src/substrate/<script>.py
 `src/substrate/common.py`. The other scripts have not been updated to this
 format yet, and some may need small adjustments to work.
 
-#### Parameters (`cylinders.py`, `spheres.py`)
+#### Config parameters (`cylinders.py`, `spheres.py`)
 
-Parameters are defined in a `params` dictionary at the top of the script. All
-lengths are in µm.
+All lengths are in µm. Unknown keys (e.g. a typo) and missing required keys
+are reported as errors before anything is generated.
 
 | Parameter                  | Description                                                          |
 |----------------------------|----------------------------------------------------------------------|
-| `name`                     | Substrate name. `None` builds it from the parameters (see below)     |
-| `seed`                     | Random seed. The same parameters and seed give the same substrate    |
+| `name`                     | *Optional.* Substrate name. If omitted, it is built from the parameters (see below) |
+| `seed`                     | *Optional.* Random seed. If omitted, a random seed is generated. The same parameters and seed give the same substrate |
 | `n_objects`                | Number of cylinders/spheres to place                                 |
 | `domain_size`              | Side of the square (cylinders, xy) or cube (spheres) objects are centered in |
 | `min_gap`                  | Minimum gap between object surfaces                                  |
@@ -151,8 +168,8 @@ lengths are in µm.
 | `gamma_shape`, `gamma_scale` | Gamma distribution of the radii                                    |
 | `radius_min`, `radius_max` | Gamma radii outside this range are redrawn (truncated distribution)  |
 | `radius_fixed`             | Radius of every object when `radius_distribution = "fixed"`          |
-| `max_attempts`             | Random positions tried per object before it is skipped               |
-| `max_consecutive_failures` | Stop after this many objects in a row could not be placed            |
+| `max_attempts`             | *Optional.* Random positions tried per object before it is skipped (default 2000) |
+| `max_consecutive_failures` | *Optional.* Stop after this many objects in a row could not be placed (default 100) |
 | `cylinder_length`          | Cylinder length along z (`cylinders.py` only)                        |
 
 Objects are placed one at a time at random non-overlapping positions. When
@@ -175,13 +192,14 @@ Each substrate is saved to `substrate/<name>/`:
 `<name>_params.json` records everything needed to trace back or regenerate a
 substrate:
 
-- `params`: the full parameter dictionary, including the seed
+- `params`: all parameters used, including defaults and the seed
 - `results`: the number of objects actually placed, the volume fraction
   (spheres) or area fraction (cylinders), and the mean, std, min and max radius
-- `script`, `created` and `git_commit`: the generator script, the date, and the
-  git commit of the project (marked `-dirty` if there were uncommitted changes)
+- `script`, `config_file`, `created` and `git_commit`: the generator script, the
+  config file, the date, and the git commit of the project (marked `-dirty` if
+  there were uncommitted changes)
 
-When `name` is `None`, the name is built from the parameters and the number
+When `name` is omitted, the name is built from the parameters and the number
 of objects actually placed, with `p` as decimal point, e.g.
 `cylinders_2840_gamma_shape0p75_scale0p55_gap0p45` or
 `spheres_500_fixed_r5_gap1`.
@@ -407,8 +425,10 @@ Results are saved in `graphOutputs/<signal_file>/`:
 ## Typical Workflow
 
 ```bash
-# 1. Create a substrate (edit parameters in the script first)
-pixi run -e trimesh-env python src/substrate/cylinders.py
+# 1. Create a substrate from a config
+cp substrate_configs/cylinders_template.toml substrate_configs/my_cylinders.toml
+#    ...edit geometry and radius distribution...
+pixi run -e trimesh-env python src/substrate/cylinders.py substrate_configs/my_cylinders.toml
 
 # 2. Create a config from the template
 cp sim_configs/config_template.toml sim_configs/my_run.toml

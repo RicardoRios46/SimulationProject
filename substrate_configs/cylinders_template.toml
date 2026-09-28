@@ -1,0 +1,40 @@
+# Template configuration file for src/substrate/cylinders.py
+# Copy this file, rename it, edit the values, then run from the project root:
+#   pixi run -e trimesh-env python src/substrate/cylinders.py substrate_configs/<config>.toml
+#
+# Randomly packed, non-overlapping parallel cylinders along z.
+# All lengths are in micrometers (µm).
+
+# Optional: substrate name, used for the output folder substrate/<name>/.
+# If omitted, it is built from the parameters and the number of cylinders
+# actually placed, e.g. cylinders_2840_gamma_shape0p75_scale0p55_gap0p45
+# name = "my_cylinders"
+
+# Optional: random seed. If omitted, a random seed is generated.
+# The seed is always recorded in <name>_params.json.
+seed = 123
+
+# --- Geometry ---
+n_objects = 3000          # Number of cylinders to place
+domain_size = 120         # Side of the square (xy) the cylinder axes are placed in
+min_gap = 0.45            # Minimum gap between cylinder surfaces
+cylinder_length = 1000    # Length along z
+
+# --- Radius distribution: "gamma" or "fixed" ---
+radius_distribution = "gamma"
+
+# Used when radius_distribution = "gamma". Radii outside
+# [radius_min, radius_max] are redrawn (truncated gamma).
+gamma_shape = 0.75
+gamma_scale = 0.55
+radius_min = 0.2
+radius_max = 3
+
+# Used when radius_distribution = "fixed": every cylinder has this radius.
+# radius_fixed = 0.5
+
+# --- Placement (optional, defaults shown) ---
+# Random positions tried per cylinder before it is skipped
+# max_attempts = 2000
+# Stop placing after this many cylinders in a row could not be placed
+# max_consecutive_failures = 100

@@ -12,3 +12,7 @@ archive_Ricardo
 
 # Python bytecode cache
 __pycache__/
+
+# Substrate configs are local, only the templates are tracked
+/substrate_configs/*
+!/substrate_configs/*_template.toml
