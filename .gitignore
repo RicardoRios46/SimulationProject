@@ -9,3 +9,6 @@
 
 archive_Cole
 archive_Ricardo
+
+# Python bytecode cache
+__pycache__/
