@@ -12,9 +12,9 @@ parameters used.
 import numpy as np
 import trimesh
 
-from common import load_params, sample_radii, place_objects, radius_name, format_value, save_substrate
+from common import load_packing_params, sample_radii, place_objects, radius_name, format_value, save_substrate
 
-params, config_path = load_params(
+params, config_path = load_packing_params(
     "Generate a substrate of randomly packed spheres.",
     required=["n_objects", "domain_size", "min_gap", "radius_distribution"],
 )
@@ -38,4 +38,4 @@ results = {
     "volume_fraction": float(np.sum(4 / 3 * np.pi * radii**3) / params["domain_size"] ** 3),
 }
 
-save_substrate(mesh, name, params, results, radii, "Random non-overlapping spheres", config_path)
+save_substrate(mesh, name, params, results, "Random non-overlapping spheres", config_path, radii=radii)

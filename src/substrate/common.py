@@ -3,7 +3,8 @@ Shared helpers for the substrate generator scripts.
 
 Conventions used by all generators:
 - Parameters are read from a TOML config file given on the command line
-  (see load_params() and the templates in substrate_configs/).
+  (see load_params(), load_packing_params() and the templates in
+  substrate_configs/).
 - All lengths are in micrometers (µm). Meshes are built in µm and
   converted to meters only when saved, as the simulation expects.
 - Common parameter names:
@@ -22,7 +23,7 @@ Conventions used by all generators:
 Outputs of save_substrate(), in substrate/<name>/:
     <name>_vertices.csv, <name>_faces.csv   Mesh in meters (simulation input)
     <name>_mesh.png                         3D preview (µm)
-    <name>_radii.png                        Radius histogram
+    <name>_radii.png                        Radius histogram (if radii are given)
     <name>_cross_section.png                2D cross-section (cylinders only)
     <name>_params.json                      Input parameters, achieved results and provenance
 """
@@ -39,8 +40,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Keys every generator accepts. Required keys are added by each script.
-OPTIONAL_DEFAULTS = {
+# Optional keys of the random packing generators (spheres.py, cylinders.py)
+PACKING_DEFAULTS = {
     "name": None,
     "seed": None,
     "max_attempts": 2000,
@@ -52,43 +53,66 @@ RADIUS_KEYS = {
 }
 
 
-def load_params(description, required):
-    """
-    Read the substrate config TOML file given on the command line.
-
-    `required` lists the keys the script needs besides the radius keys, which
-    depend on radius_distribution (see RADIUS_KEYS). Optional keys not in the
-    file take their value from OPTIONAL_DEFAULTS. Unknown keys are an error,
-    to catch typos. If no seed is given, a random one is generated.
-
-    Returns (params, config_path).
-    """
+def read_config(description):
+    """Read the substrate config TOML file given on the command line. Returns (config, config_path)."""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("config", help="Substrate config file (.toml), e.g. substrate_configs/<name>.toml")
     config_path = parser.parse_args().config
 
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
+    return config, config_path
+
+
+def check_keys(config, config_path, required, optional):
+    """Raise an error for missing required keys or unknown keys (e.g. typos)."""
+    unknown = sorted(set(config) - set(required) - set(optional))
+    if unknown:
+        raise ValueError(f"{config_path}: unknown parameter(s) {unknown}")
+
+    missing = [key for key in required if key not in config]
+    if missing:
+        raise ValueError(f"{config_path}: missing parameter(s) {missing}")
+
+
+def load_params(description, required, defaults):
+    """
+    Read and check the config given on the command line. `defaults` holds the
+    optional keys and their default values. Returns (params, config_path).
+    """
+    config, config_path = read_config(description)
+    check_keys(config, config_path, required, defaults)
+    return {**defaults, **config}, config_path
+
+
+def load_packing_params(description, required):
+    """
+    Read and check the config of a random packing generator.
+
+    `required` lists the keys the script needs besides the radius keys, which
+    depend on radius_distribution (see RADIUS_KEYS). Optional keys not in the
+    file take their value from PACKING_DEFAULTS. If no seed is given, a random
+    one is generated.
+
+    Returns (params, config_path).
+    """
+    config, config_path = read_config(description)
 
     distribution = config.get("radius_distribution")
     if distribution not in RADIUS_KEYS:
         raise ValueError(f"{config_path}: radius_distribution must be one of {list(RADIUS_KEYS)}, got {distribution!r}")
 
+    # Radius keys of the other distribution are allowed (and ignored), so a
+    # config can keep both sets of values
     all_radius_keys = [key for keys in RADIUS_KEYS.values() for key in keys]
-    allowed = set(required) | set(OPTIONAL_DEFAULTS) | set(all_radius_keys)
-
-    unknown = sorted(set(config) - allowed)
-    if unknown:
-        raise ValueError(f"{config_path}: unknown parameter(s) {unknown}")
-
-    missing = [key for key in list(required) + RADIUS_KEYS[distribution] if key not in config]
-    if missing:
-        raise ValueError(f"{config_path}: missing parameter(s) {missing}")
+    check_keys(config, config_path,
+               required=list(required) + RADIUS_KEYS[distribution],
+               optional=list(PACKING_DEFAULTS) + all_radius_keys)
 
     if distribution == "gamma" and config["radius_min"] >= config["radius_max"]:
         raise ValueError(f"{config_path}: radius_min must be smaller than radius_max")
 
-    params = {**OPTIONAL_DEFAULTS, **config}
+    params = {**PACKING_DEFAULTS, **config}
 
     if params["seed"] is None:
         params["seed"] = int(np.random.default_rng().integers(2**32))
@@ -282,17 +306,17 @@ def plot_radii(radii, path, title):
     plt.close(fig)
 
 
-def save_substrate(mesh, name, params, results, radii, title, config_path, equal_aspect=True):
+def save_substrate(mesh, name, params, results, title, config_path, radii=None, equal_aspect=True):
     """
     Save a substrate built in µm to substrate/<name>/: mesh CSVs (in meters),
     preview images, and a params JSON with inputs, results and provenance.
+    If `radii` is given, a radius histogram and radius statistics are added.
     Returns the output directory.
     """
     output_dir = f"substrate/{name}"
     os.makedirs(output_dir, exist_ok=True)
 
     plot_mesh(mesh, f"{output_dir}/{name}_mesh.png", title, equal_aspect)
-    plot_radii(radii, f"{output_dir}/{name}_radii.png", f"{title}: radius distribution")
 
     # Convert from µm to meters for the simulation
     mesh_m = mesh.copy()
@@ -305,12 +329,16 @@ def save_substrate(mesh, name, params, results, radii, title, config_path, equal
         f"{output_dir}/{name}_faces.csv", index=False
     )
 
-    radius_results = {
-        "radius_mean": float(np.mean(radii)),
-        "radius_std": float(np.std(radii)),
-        "radius_min": float(np.min(radii)),
-        "radius_max": float(np.max(radii)),
-    }
+    results = {**results, "mesh_watertight": bool(mesh.is_watertight)}
+
+    if radii is not None:
+        plot_radii(radii, f"{output_dir}/{name}_radii.png", f"{title}: radius distribution")
+        results.update({
+            "radius_mean": float(np.mean(radii)),
+            "radius_std": float(np.std(radii)),
+            "radius_min": float(np.min(radii)),
+            "radius_max": float(np.max(radii)),
+        })
 
     record = {
         "substrate_name": name,
@@ -320,7 +348,7 @@ def save_substrate(mesh, name, params, results, radii, title, config_path, equal
         "git_commit": git_commit(),
         "units": "Parameters and results in µm; mesh CSVs in meters",
         "params": params,
-        "results": {**results, **radius_results},
+        "results": results,
     }
 
     with open(f"{output_dir}/{name}_params.json", "w", encoding="utf-8") as f:

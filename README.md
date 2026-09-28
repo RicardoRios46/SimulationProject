@@ -117,7 +117,19 @@ Any mesh can be used as long as it is converted to this vertex/face CSV format.
 The scripts in `src/substrate/` build meshes with trimesh and write them to
 `substrate/<name>/`. Run them from the project root.
 
-`cylinders.py` and `spheres.py` read their parameters from a TOML config file
+| Script                          | Substrate                                                   | Parameters            |
+|---------------------------------|-------------------------------------------------------------|-----------------------|
+| `cylinders.py`                  | Randomly packed parallel cylinders, gamma or fixed radius   | Config file           |
+| `spheres.py`                    | Randomly packed spheres, gamma or fixed radius              | Config file           |
+| `single_spheres.py`             | One single-sphere substrate per radius                      | Config file           |
+| `substrateCATERPillar.py`       | Converts a CATERPillar output file to a mesh (see below)    | Variables in script   |
+| `viewSub.py`                    | Re-plots an existing substrate without regenerating it      | Variables in script   |
+| `single_axon.py`                | Single beaded axon                                          | Variables in script   |
+| `substrate_beaded_axon_SA.py`   | Beaded axon bundles at matched surface area                 | Variables in script   |
+| `substrate_beaded_axon_V.py`    | Beaded axon bundles at matched volume                       | Variables in script   |
+
+The scripts marked "Config file" use the shared helpers in
+`src/substrate/common.py` and read their parameters from a TOML config file
 in `substrate_configs/`. Copy a template, edit it, and pass it to the script:
 
 ```bash
@@ -125,37 +137,25 @@ cp substrate_configs/cylinders_template.toml substrate_configs/my_cylinders.toml
 pixi run -e trimesh-env python src/substrate/cylinders.py substrate_configs/my_cylinders.toml
 ```
 
-Templates: `substrate_configs/cylinders_template.toml` and
-`substrate_configs/spheres_template.toml`. Like `sim_configs/`, only the
-templates are version-controlled. Your own configs stay local, and the
-parameters of each substrate are saved in its `<name>_params.json`.
+Each script has a template, `substrate_configs/<script>_template.toml`. Like
+`sim_configs/`, only the templates are version-controlled. Your own configs
+stay local, and the parameters of each substrate are saved in its
+`<name>_params.json`. Unknown keys (e.g. a typo) and missing required keys are
+reported as errors before anything is generated.
 
-The other scripts still take their parameters from variables at the top of
-the script:
+The other scripts take their parameters from variables at the top of the
+script:
 
 ```bash
 pixi run -e trimesh-env python src/substrate/<script>.py
 ```
 
-| Script                          | Substrate                                                        |
-|---------------------------------|------------------------------------------------------------------|
-| `cylinders.py`                  | Randomly packed parallel cylinders, gamma or fixed radius        |
-| `spheres.py`                    | Randomly packed spheres, gamma or fixed radius                   |
-| `substrateSphere.py`            | Single spheres over a range of radii                             |
-| `single_axon.py`                | Single beaded axon                                               |
-| `substrate_beaded_axon_SA.py`   | Beaded axons at matched surface area                             |
-| `substrate_beaded_axon_V.py`    | Beaded axons at matched volume                                   |
-| `substrateCATERPillar.py`       | Converts a CATERPillar output file to a mesh (see below)         |
-| `viewSub.py`                    | Re-plots an existing substrate without regenerating it           |
+The beaded axon scripts (`single_axon.py`, `substrate_beaded_axon_*.py`) are
+not currently maintained and may need adjustments to work.
 
-`cylinders.py` and `spheres.py` use the shared helpers in
-`src/substrate/common.py`. The other scripts have not been updated to this
-format yet, and some may need small adjustments to work.
+#### Random packing: `cylinders.py`, `spheres.py`
 
-#### Config parameters (`cylinders.py`, `spheres.py`)
-
-All lengths are in µm. Unknown keys (e.g. a typo) and missing required keys
-are reported as errors before anything is generated.
+Config parameters (all lengths in µm):
 
 | Parameter                  | Description                                                          |
 |----------------------------|----------------------------------------------------------------------|
@@ -177,32 +177,45 @@ the domain fills up, some objects cannot be placed and are skipped, so fewer
 than `n_objects` may be placed. Placement can also be stopped with Ctrl+C,
 and the objects placed so far are saved.
 
+When `name` is omitted, the name is built from the parameters and the number
+of objects actually placed, with `p` as decimal point, e.g.
+`cylinders_2840_gamma_shape0p75_scale0p55_gap0p45` or
+`spheres_500_fixed_r5_gap1`.
+
+#### Single spheres: `single_spheres.py`
+
+Creates one substrate with a single sphere for each radius, e.g. to compare
+the simulation with the analytical signal of restricted diffusion in a sphere.
+
+| Parameter     | Description                                                             |
+|---------------|-------------------------------------------------------------------------|
+| `radii`       | List of sphere radii (µm). One substrate is created per radius          |
+| `name_prefix` | *Optional.* Substrate names are `<name_prefix>_r<radius>`, e.g. `sphere_r2p5` (default `"sphere"`) |
+
 #### Outputs
 
-Each substrate is saved to `substrate/<name>/`:
+Each substrate from a config-file script is saved to `substrate/<name>/`:
 
 | File                        | Contents                                                          |
 |-----------------------------|-------------------------------------------------------------------|
 | `<name>_vertices.csv`, `<name>_faces.csv` | Mesh in meters (simulation input)                   |
 | `<name>_params.json`        | Parameters used, achieved results and provenance (see below)      |
 | `<name>_mesh.png`           | 3D preview (µm)                                                    |
-| `<name>_radii.png`          | Histogram of the placed radii                                      |
+| `<name>_radii.png`          | Histogram of the placed radii (random packing only)               |
 | `<name>_cross_section.png`  | Top view of the cylinder packing (`cylinders.py` only)            |
 
 `<name>_params.json` records everything needed to trace back or regenerate a
 substrate:
 
 - `params`: all parameters used, including defaults and the seed
-- `results`: the number of objects actually placed, the volume fraction
-  (spheres) or area fraction (cylinders), and the mean, std, min and max radius
+- `results`: what was actually generated, and whether the mesh is watertight.
+  For random packing: the number of objects placed, the volume fraction
+  (spheres) or area fraction (cylinders), and the mean, std, min and max
+  radius. For single spheres: the radius and the mesh volume compared with the
+  ideal sphere volume
 - `script`, `config_file`, `created` and `git_commit`: the generator script, the
   config file, the date, and the git commit of the project (marked `-dirty` if
   there were uncommitted changes)
-
-When `name` is omitted, the name is built from the parameters and the number
-of objects actually placed, with `p` as decimal point, e.g.
-`cylinders_2840_gamma_shape0p75_scale0p55_gap0p45` or
-`spheres_500_fixed_r5_gap1`.
 
 ### CATERPillar substrates
 

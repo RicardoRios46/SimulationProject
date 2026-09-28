@@ -12,9 +12,9 @@ parameters used.
 import numpy as np
 import trimesh
 
-from common import load_params, sample_radii, place_objects, radius_name, format_value, save_substrate, plot_cross_section
+from common import load_packing_params, sample_radii, place_objects, radius_name, format_value, save_substrate, plot_cross_section
 
-params, config_path = load_params(
+params, config_path = load_packing_params(
     "Generate a substrate of randomly packed parallel cylinders.",
     required=["n_objects", "domain_size", "min_gap", "cylinder_length", "radius_distribution"],
 )
@@ -40,7 +40,7 @@ results = {
 
 # Cylinders are much longer than the domain is wide, so the 3D preview is not
 # scaled equally, and a cross-section shows the packing
-output_dir = save_substrate(mesh, name, params, results, radii, "Random non-overlapping cylinders",
-                            config_path, equal_aspect=False)
+output_dir = save_substrate(mesh, name, params, results, "Random non-overlapping cylinders",
+                            config_path, radii=radii, equal_aspect=False)
 plot_cross_section(centers, radii, params["domain_size"], f"{output_dir}/{name}_cross_section.png",
                    "Random non-overlapping cylinders: cross-section")
