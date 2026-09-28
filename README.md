@@ -65,7 +65,7 @@ The project defines three separate environments, one per stage of the pipeline:
 
 | Environment             | Python | Used for                     | Main packages                                   |
 |-------------------------|--------|------------------------------|-------------------------------------------------|
-| `trimesh-env`           | 3.13   | Creating substrates          | trimesh, matplotlib                             |
+| `trimesh-env`           | 3.13   | Creating substrates          | trimesh, matplotlib, scipy, manifold3d          |
 | `disimpy-env`           | 3.9    | Running MC simulations       | disimpy 0.3, cudatoolkit 11.8, manifold3d, tomli |
 | `dipy-env` (`default`)  | 3.13   | Signal/DKI analysis, plotting | dipy, matplotlib                                |
 
@@ -122,7 +122,7 @@ The scripts in `src/substrate/` build meshes with trimesh and write them to
 | `cylinders.py`                  | Randomly packed parallel cylinders, gamma or fixed radius   | Config file           |
 | `spheres.py`                    | Randomly packed spheres, gamma or fixed radius              | Config file           |
 | `single_spheres.py`             | One single-sphere substrate per radius                      | Config file           |
-| `substrateCATERPillar.py`       | Converts a CATERPillar output file to a mesh (see below)    | Variables in script   |
+| `caterpillar.py`                | Converts a CATERPillar output file to a mesh (see below)    | Config file           |
 | `view_substrate.py`             | Re-plots an existing substrate (see below)                  | Command-line options  |
 | `single_axon.py`                | Single beaded axon                                          | Variables in script   |
 | `substrate_beaded_axon_SA.py`   | Beaded axon bundles at matched surface area                 | Variables in script   |
@@ -236,10 +236,29 @@ pixi run -e trimesh-env python src/substrate/view_substrate.py <name> [--elev 20
 ### CATERPillar substrates
 
 CATERPillar outputs (e.g. `CATERPillar_inputs/single_axon_run3.csv`) describe
-each axon as a chain of spheres (`X Y Z inner_radius outer_radius` columns).
-`substrateCATERPillar.py` creates one sphere per row, merges them into a single
-watertight mesh, and saves it in the vertex/face format above. Edit the input
-file and substrate name at the top of the script.
+each cell as a chain of overlapping spheres, one per row, with the columns
+`cell_type cell_id component component_id X Y Z inner_radius outer_radius`
+(µm). `caterpillar.py` creates one sphere per row and merges the spheres of
+each cell (`cell_type` + `cell_id`) into one surface, so every axon stays a
+separate compartment. The cells are then combined into one substrate:
+
+```bash
+cp substrate_configs/caterpillar_template.toml substrate_configs/my_caterpillar.toml
+pixi run -e trimesh-env python src/substrate/caterpillar.py substrate_configs/my_caterpillar.toml
+```
+
+| Parameter              | Description                                                             |
+|------------------------|-------------------------------------------------------------------------|
+| `input_file`           | CATERPillar output file, relative to the project root                   |
+| `name`                 | *Optional.* Substrate name (default `caterpillar_<input file name>`)    |
+| `radius_column`        | *Optional.* `"inner_radius"` (the axon itself, default) or `"outer_radius"` (including the myelin sheath) |
+| `cell_types`           | *Optional.* Only use these cell types, e.g. `["axon"]` (default: all rows) |
+| `sphere_subdivisions`  | *Optional.* Icosphere resolution of each sphere: 1 = 80 faces, 2 = 320 faces (default 1) |
+| `smoothing_iterations` | *Optional.* Laplacian smoothing iterations after merging, 0 = off (default 1). The total volume is kept constant |
+
+The results in `<name>_params.json` include the number of cells and spheres,
+the number of separate volumes in the final mesh (normally one per cell), and
+the mesh volume.
 
 ## 2. Simulation Configuration
 

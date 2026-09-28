@@ -32,6 +32,8 @@ disimpy = ">=0.3.0,<0.4"
 python = "3.13.*"
 trimesh = "*"
 matplotlib = "*"
+# Needed by trimesh for mesh.split() (counting separate volumes)
+scipy = "*"
 
 [feature.trimesh.pypi-dependencies]
 # Needed for trimesh.boolean.union(..., engine="manifold") in the substrate scripts
