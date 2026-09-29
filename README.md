@@ -23,8 +23,8 @@ The project uses:
 ├── slurm_outputs/          # SLURM log files
 ├── src/
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
-│   ├── plot_signal.py      # Signal decay plot (dipy-env)
-│   ├── fit_signal.py       # Signal fits (D, K, V) and DKI analysis (dipy-env)
+│   ├── fit_powder_average.py # Powder-averaged signal: plots and fits (D, K, V) (dipy-env)
+│   ├── fit_tensor.py       # DKI tensor fit: FA, MD, AD, RD (dipy-env)
 │   ├── plot_trajectories.py # Walker trajectory plot (dipy-env)
 │   ├── analysis_utils.py   # Shared analysis functions
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
@@ -104,8 +104,8 @@ which does not include disimpy.
                                         (+ substrate_configs/<config>.toml)
 2. Write config          -             sim_configs/<config>.toml
 3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>/<config>.csv
-4. Analyze signals       dipy-env      src/plot_signal.py,    -> graphOutputs/<config>/
-                                        src/fit_signal.py
+4. Analyze signals       dipy-env      src/fit_powder_average.py, -> graphOutputs/<config>/
+                                        src/fit_tensor.py
 ```
 
 ## 1. Substrates
@@ -500,30 +500,26 @@ simulation, if enabled) completes successfully.
 
 ## 4. Signal & DKI Analysis
 
-The analysis is split into three scripts that take the signal file and can
-be run separately:
+The analysis has one script for the powder-averaged signal and one for the
+tensor (DKI) fit, plus a trajectory plot. Each takes the signal file and can
+be run on its own:
 
 ```bash
-pixi run -e dipy-env python src/plot_signal.py outputs/<config>/<signal_file>.csv
-pixi run -e dipy-env python src/fit_signal.py outputs/<config>/<signal_file>.csv
+pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal_file>.csv [--order 3] [--fix-intercept]
+pixi run -e dipy-env python src/fit_tensor.py outputs/<config>/<signal_file>.csv
 pixi run -e dipy-env python src/plot_trajectories.py outputs/<config>/<signal_file>.csv
 ```
 
-| Script                 | Does                                                        |
-|------------------------|-------------------------------------------------------------|
-| `plot_signal.py`       | Plots the powder-averaged signal decay (no fitting)        |
-| `fit_signal.py`        | Signal fits, frequency dependence and DKI (see below)       |
-| `plot_trajectories.py` | Plots the walker trajectories (needs `<signal_file>_traj.csv` next to the signal file) |
-
-The Pixi task `fitsGraph` runs `plot_signal.py` and `fit_signal.py`:
+The Pixi task `fitsGraph` runs `fit_powder_average.py` (default options) and
+`fit_tensor.py`:
 
 ```bash
 pixi run fitsGraph outputs/<config>/<signal_file>.csv
 ```
 
-`fit_signal.py` works with any number of waveforms. It reads each waveform
+Both fit scripts work with any number of waveforms. They read each waveform
 file listed in the signal file from `waveforms/` (with the raster time and
-gradient scale of the run's `_metadata.json`) and uses the calculations of
+gradient scale of the run's `_metadata.json`) and use the calculations of
 `waveform_utils.py` to find:
 
 - the **encoding**, from the b-tensor shape: `LTE` (one non-zero
@@ -535,38 +531,51 @@ gradient scale of the run's `_metadata.json`) and uses the calculations of
 
 The waveform files must still be the ones used in the simulation.
 
-`fit_signal.py` performs:
+The frequency dependence of a parameter is fitted against the centroid
+frequency with linear, square root and squared models, when there are at
+least three frequencies. The model with the lowest least-squares error is
+reported as the best fit. With only a few frequencies this choice can change
+easily.
 
-- Powder averaging of the signal over rotations
-- Cumulant fit of the log-signal decay (b in ms/µm²), 2nd order by default:
-  log S = C + B b + A b², giving D = −B, V = 2A and kurtosis K = 3V/D². With
-  `--order 3`, the b³ term is added (log S = C + B b + A b² + E b³), giving
-  also the third cumulant k3 = −6E (µm⁶/ms³) and the skewness k3/V^(3/2) (not
-  defined for V ≤ 0, and very large when V is close to 0). The intercept C is
-  fitted, or fixed at 0 (S = 1 at b = 0) with `--fix-intercept`
-- Frequency-dependence fits of D, K and V against the centroid frequency, for
-  the LTE waveforms, when there are at least three (linear, square root and
-  squared models). The model with the lowest least-squares error is reported
-  as the best fit. With only a few frequencies this choice can change easily
-- DKI fit (DIPY) for FA, MD, AD and RD of each LTE waveform, and their
-  frequency dependence
+### Powder average: `fit_powder_average.py`
+
+- Powder averaging of the signal over rotations, and a plot of the signal decay
+- Cumulant fit of the log-signal decay of each waveform (b in ms/µm²), 2nd
+  order by default: log S = C + B b + A b², giving D = −B, V = 2A and kurtosis
+  K = 3V/D². With `--order 3`, the b³ term is added
+  (log S = C + B b + A b² + E b³), giving also the third cumulant k3 = −6E
+  (µm⁶/ms³) and the skewness k3/V^(3/2) (not defined for V ≤ 0, and very
+  large when V is close to 0). The intercept C is fitted, or fixed at 0
+  (S = 1 at b = 0) with `--fix-intercept`. The fitted curves are plotted with
+  the data
+- Frequency dependence of D, K and V for each encoding, with one panel per
+  encoding (LTE, STE). Encodings with fewer than three waveforms are plotted
+  without model fits
+
+### Tensor: `fit_tensor.py`
+
+- DKI fit (DIPY) on each LTE waveform, using all its rotations and b-values,
+  for FA, MD, AD and RD
+- Frequency dependence of MD, AD and RD
 
 ### Analysis Outputs
 
-Results are saved in `graphOutputs/<signal_file>/`. `fit_signal.py`
-overwrites its files on each run, whatever the options, so copy them before
-running again with other options to compare:
+Results are saved in `graphOutputs/<signal_file>/`. The scripts overwrite
+their files on each run, whatever the options, so copy them before running
+again with other options to compare.
 
-| File                             | Contents                                          |
-|----------------------------------|---------------------------------------------------|
-| `poweder_average_signal.csv`     | Powder-averaged signal per waveform and b-value   |
-| `cumulant_fit.csv`               | Fit order, fixed intercept or not, and coefficients C, B, A, E per waveform |
-| `signal_<signal_file>.svg`       | Signal decay (`plot_signal.py`)                   |
-| `signal_fit_<signal_file>.svg`   | Signal decay with the fits                        |
-| `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | Frequency dependence of D, K, V  |
-| `MD_AD_RD.png`                   | Frequency dependence of DKI metrics               |
-| `traj_<signal_file>.png`         | Walker trajectories (`plot_trajectories.py`)      |
-| `results.csv`                    | Per waveform: encoding, centroid frequency (Hz), FA, MD, AD, RD (LTE only), D, kurtosis and variance (and k3, skewness with `--order 3`) |
+| File                                 | Script                  | Contents |
+|--------------------------------------|-------------------------|----------|
+| `powder_average_signal.csv`          | `fit_powder_average.py` | Powder-averaged signal per waveform and b-value |
+| `powder_average_fit.csv`             | `fit_powder_average.py` | Per waveform: encoding, centroid frequency (Hz), fit order, fixed intercept or not, coefficients C, B, A, E, D, kurtosis and variance (and k3, skewness with `--order 3`) |
+| `powder_average_frequency_fit.csv`   | `fit_powder_average.py` | Frequency-dependence models of D, K, V per encoding: slope, intercept, error, best |
+| `signal_<signal_file>.svg`           | `fit_powder_average.py` | Signal decay |
+| `signal_fit_<signal_file>.svg`       | `fit_powder_average.py` | Signal decay with the fits |
+| `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | `fit_powder_average.py` | Frequency dependence of D, K, V (LTE and STE panels) |
+| `tensor_fit.csv`                     | `fit_tensor.py`         | Per LTE waveform: centroid frequency (Hz), FA, MD, AD, RD |
+| `tensor_frequency_fit.csv`           | `fit_tensor.py`         | Frequency-dependence models of MD, AD, RD |
+| `MD_AD_RD.png`                       | `fit_tensor.py`         | Frequency dependence of MD, AD and RD |
+| `traj_<signal_file>.png`             | `plot_trajectories.py`  | Walker trajectories (needs `<signal_file>_traj.csv` next to the signal file) |
 
 ## Typical Workflow
 

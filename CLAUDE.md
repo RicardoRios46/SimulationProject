@@ -10,8 +10,10 @@ Monte Carlo diffusion MRI simulation pipeline:
 
 1. Build substrate meshes (`src/substrate/`, `trimesh-env`)
 2. Simulate with disimpy on GPU (`src/Simulation.py`, `disimpy-env`)
-3. Analyze signals / DKI (`src/plot_signal.py`, `src/fit_signal.py`,
-   `src/plot_trajectories.py`, sharing `src/analysis_utils.py`; `dipy-env`)
+3. Analyze signals (`dipy-env`): `src/fit_powder_average.py` (powder-averaged
+   signal: plots, cumulant fit D/K/V, frequency dependence per encoding),
+   `src/fit_tensor.py` (DKI on the LTE waveforms), `src/plot_trajectories.py`,
+   sharing `src/analysis_utils.py`. Each writes its own results CSVs.
 
 Always run scripts from the project root; all paths are relative to it.
 
@@ -157,27 +159,23 @@ Where things run:
   the current generators, once the periodic boundary work is done, to
   replace the old ones in the simulations.
 
-### Analysis (`src/fit_signal.py`)
+### Analysis (`src/fit_powder_average.py`, `src/fit_tensor.py`)
 
-- `fit_signal.py` still draws the signal decay with the fits
-  (`signal_fit_<signal>.svg`, the original graphing.py plot). The user may
-  want this as a separate `plot_fit_signal.py` that combines the outputs of
-  `plot_signal.py` and `fit_signal.py` (e.g. powder-averaged signal and
-  fitted coefficients) into a plot like the original, so `fit_signal.py`
-  only fits.
-- `fit_signal.py` identifies waveforms from their files (`waveform_info` in
+- Both scripts identify waveforms from their files (`waveform_info` in
   `analysis_utils.py`): encoding from the b-tensor shape, frequency = centroid
-  of |Q(f)|^2 (follows the pending |Q|^2 vs |G|^2 decision). Frequency fits
-  and DKI use all LTE waveforms. The frequency-model choice (lowest SSE with
-  3 points) is fragile: switching from nominal 0/50/100 Hz to centroids
+  of |Q(f)|^2 (follows the pending |Q|^2 vs |G|^2 decision). The frequency
+  fits of D/K/V have one panel per encoding (LTE, STE), ready for STE
+  waveforms at several frequencies; STE has only 2 waveforms now (no fits).
+  STEaniso is classed as STE, but its axes have different frequencies, so its
+  combined centroid is not a single frequency: consider leaving it out of the
+  STE frequency series. The frequency-model choice (lowest SSE with 3
+  points) is fragile: switching from nominal 0/50/100 Hz to centroids
   changed the best DKI AD/RD models on the test cylinders.
-- `fit_signal.py --order 3` adds the b^3 term (k3 = -6E, skewness
+- `fit_powder_average.py --order 3` adds the b^3 term (k3 = -6E, skewness
   k3/V^1.5); `--fix-intercept` sets C = 0. On the 6 b-value test outputs the
   order-3 fit is unstable for the spheres (V < 0 at 50/100 Hz and STEiso):
   more b-values are needed (simulations being planned). Possible
   improvement: weight the log fit (high-b points are noisier).
-- Output filename typo `poweder_average_signal.csv` (kept for now, README
-  documents it).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the
   STE waveforms at every frequency (see Waveforms and protocol).
 

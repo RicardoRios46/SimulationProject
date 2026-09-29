@@ -1,6 +1,6 @@
 """
-Shared functions for the signal analysis scripts (plot_signal.py,
-fit_signal.py, plot_trajectories.py).
+Shared functions for the signal analysis scripts (fit_powder_average.py,
+fit_tensor.py, plot_trajectories.py).
 """
 
 import json
@@ -31,12 +31,6 @@ def load_signals(signal_file):
 def powder_average(df):
     """Mean signal over the rotations, indexed by (waveform_idx, bval)."""
     return df.groupby(['waveform_idx', 'bval'])['signal'].mean()
-
-
-def waveform_label(df, wf):
-    """Waveform file name without extension for a waveform_idx."""
-    raw_path = df[df['waveform_idx'] == wf]['file'].iloc[0]
-    return os.path.basename(raw_path).replace(".csv", "")
 
 
 def waveform_info(df, signal_file):
@@ -102,6 +96,11 @@ def fit_cumulant(b, signal, order=2, fix_intercept=False, b_max=10):
     E, A, B, C = coeffs
     if abs(A) < 1e-9:
         A = 0
+    return cumulant_parameters(C, B, A, E, order)
+
+
+def cumulant_parameters(C, B, A, E, order):
+    """Coefficients and derived parameters of a cumulant fit (see fit_cumulant)."""
     D = -B
     V = A * 2
     k3 = -6 * E

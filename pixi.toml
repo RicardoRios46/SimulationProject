@@ -41,7 +41,7 @@ manifold3d = ">=3.5.1,<4"
 
 # task
 [feature.dipy.tasks]
-fitsGraph = { cmd = "python src/plot_signal.py {{ file }} && python src/fit_signal.py {{ file }}", args = ["file"] }
+fitsGraph = { cmd = "python src/fit_powder_average.py {{ file }} && python src/fit_tensor.py {{ file }}", args = ["file"] }
 
 # Environment mapping
 [environments]
