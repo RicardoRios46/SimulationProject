@@ -25,6 +25,8 @@ The project uses:
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
 │   ├── graphing.py         # Signal and DKI analysis (dipy-env)
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
+│   ├── compare_waveforms.py # Overlay several waveforms to compare them (dipy-env)
+│   ├── waveform_utils.py   # Shared waveform calculations
 │   └── substrate/          # Substrate generation scripts (trimesh-env)
 ├── waveforms/              # Gradient waveforms (N x 3 CSV)
 ├── pixi.toml               # Pixi environments and tasks
@@ -330,7 +332,33 @@ spectrum |Q(f)|², computed over the full spectrum. It is shown per axis
 (dashed lines) and combined over the three axes (solid line), using their
 total power. The combined value does not depend on the waveform orientation;
 the per-axis values do. Note that the gradient spectrum |G(f)|² = (2πf)²|Q(f)|²
-would give higher centroids. Options: `--raster-time-ms` and
+would give higher centroids.
+
+To compare several waveforms, e.g. to check that the axes of an STE match its
+LTE component files, overlay them with:
+
+```bash
+pixi run -e dipy-env python src/compare_waveforms.py waveforms/STEiso.csv \
+    waveforms/STEiso_LTE1.csv waveforms/STEiso_LTE2.csv waveforms/STEiso_LTE3.csv \
+    --name STEiso_components
+```
+
+This saves `graphOutputs/waveforms/<name>.png` with one row per axis (only the
+axes with gradient in some file) and the gradient, dephasing and encoding
+spectrum (with centroid lines) of every file overlaid. The first file is drawn
+as a thick transparent band, so files that match it show inside the band. A
+summary table (duration, b-value, b-tensor eigenvalues, refocusing, centroid
+frequencies) is printed and saved as `<name>.csv`.
+
+| Option           | Description                                                        |
+|------------------|--------------------------------------------------------------------|
+| `--name`         | Output name (default `compare_<first file>`)                       |
+| `--labels`       | Legend labels, one per file (default: file names)                  |
+| `--shared-scale` | Normalize all spectra by one maximum to also compare encoding power (default: each curve normalized to its own maximum, to compare frequency content) |
+
+`--raster-time-ms`, `--gradient-scale`, `--fmax` and `--output-dir` work as in
+`plot_waveforms.py`. Both scripts share their calculations in
+`src/waveform_utils.py`. Options: `--raster-time-ms` and
 `--gradient-scale` (same defaults as the simulation config), `--fmax` for the
 spectrum range, and `--output-dir`.
 

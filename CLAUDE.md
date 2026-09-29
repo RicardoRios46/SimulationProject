@@ -88,7 +88,8 @@ Where things run:
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
   new waveforms with `src/plot_waveforms.py` (g, q, spectrum, centroid
-  frequencies, b-tensor). At file amplitude the current waveforms all have
+  frequencies, b-tensor) and compare several with `src/compare_waveforms.py`;
+  both use the calculations in `src/waveform_utils.py`. At file amplitude the current waveforms all have
   b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
   b-tensor; they differ in the spectral content per axis. Centroid frequencies
   (dephasing spectrum): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
@@ -156,13 +157,15 @@ Where things run:
 - Extend the waveform files so there is an STE waveform at every frequency,
   so V_iso can be calculated precisely (see Analysis).
 - Add the M restriction tensor (related to the spectral content of the
-  waveform) to `src/plot_waveforms.py`. The user will point to the literature
-  for how to calculate it.
-- `src/plot_waveforms.py` uses the dephasing spectrum |Q(f)|^2 for the
+  waveform) to `src/plot_waveforms.py` (and the shared `src/waveform_utils.py`).
+  The user will point to the literature for how to calculate it.
+- The waveform scripts use the dephasing spectrum |Q(f)|^2 for the
   encoding spectrum and the centroid frequencies. The user is checking with a
   collaborator whether the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 is
   the usual choice; it may need to change (it gives higher centroids).
-- Create a separate script to compare several waveform files on the same axes.
+- Add a `--sum-check` option to `src/compare_waveforms.py`: treat the first
+  file as the reference and the rest as its components, overlay the sum of the
+  components and print the maximum difference per axis.
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and
   STEaniso waveforms.
