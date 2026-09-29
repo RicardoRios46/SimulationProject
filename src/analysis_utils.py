@@ -3,11 +3,14 @@ Shared functions for the signal analysis scripts (plot_signal.py,
 fit_signal.py, plot_trajectories.py).
 """
 
+import json
 import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from waveform_utils import analyze_waveform
 
 
 def output_dir(signal_file):
@@ -34,6 +37,45 @@ def waveform_label(df, wf):
     """Waveform file name without extension for a waveform_idx."""
     raw_path = df[df['waveform_idx'] == wf]['file'].iloc[0]
     return os.path.basename(raw_path).replace(".csv", "")
+
+
+def waveform_info(df, signal_file):
+    """Properties of each waveform in a signal file, keyed by waveform_idx.
+
+    The waveform files are read from waveforms/ (as in Simulation.py), with the
+    raster time and gradient scale of the run's metadata file (defaults 0.02 ms
+    and 1e-3 if there is no metadata file). For each waveform:
+        label      File name without extension
+        encoding   "LTE" (one non-zero b-tensor eigenvalue), "STE" (three equal
+                   eigenvalues) or "other", from the b-tensor shape
+        frequency  Centroid frequency of the dephasing spectrum |Q(f)|^2 (Hz)
+        direction  Main axis of the b-tensor (unit vector, before rotation)
+    """
+    meta_file = f"{os.path.splitext(signal_file)[0]}_metadata.json"
+    waveform_config = {}
+    if os.path.exists(meta_file):
+        with open(meta_file) as f:
+            waveform_config = json.load(f).get("waveform", {})
+    raster_time = waveform_config.get("raster_time_ms", 0.02)
+    gradient_scale = waveform_config.get("gradient_scale", 1e-3)
+
+    info = {}
+    for wf, file in df.groupby('waveform_idx')['file'].first().items():
+        w = analyze_waveform(f"waveforms/{file}", raster_time, gradient_scale)
+        shape = w["eigenvalues"] / w["b"]      # largest first
+        if shape[1] < 0.01:
+            encoding = "LTE"
+        elif shape[2] > 0.3:
+            encoding = "STE"
+        else:
+            encoding = "other"
+        info[wf] = {
+            "label": w["name"],
+            "encoding": encoding,
+            "frequency": w["centroid_combined"],
+            "direction": np.linalg.eigh(w["B"])[1][:, -1],
+        }
+    return info
 
 
 def fit_cumulant(b, signal, b_max=10):

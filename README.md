@@ -521,18 +521,31 @@ The Pixi task `fitsGraph` runs `plot_signal.py` and `fit_signal.py`:
 pixi run fitsGraph outputs/<config>/<signal_file>.csv
 ```
 
-> **Current assumption:** `fit_signal.py` expects exactly five waveforms, in this
-> order: LTE 0 Hz, LTE 50 Hz, LTE 100 Hz, STE isotropic, STE anisotropic. The
-> frequency-dependence fits use the first three (0, 50, 100 Hz), and DKI is fit
-> for the LTE waveforms only.
+`fit_signal.py` works with any number of waveforms. It reads each waveform
+file listed in the signal file from `waveforms/` (with the raster time and
+gradient scale of the run's `_metadata.json`) and uses the calculations of
+`waveform_utils.py` to find:
+
+- the **encoding**, from the b-tensor shape: `LTE` (one non-zero
+  eigenvalue), `STE` (three equal eigenvalues) or `other`
+- the **frequency**: the centroid frequency of the dephasing spectrum
+  |Q(f)|², as in `plot_waveforms.py`
+- the LTE **direction** (main axis of the b-tensor), used with the rotation
+  matrices for the DKI gradient directions
+
+The waveform files must still be the ones used in the simulation.
 
 `fit_signal.py` performs:
 
 - Powder averaging of the signal over rotations
 - 2nd order fit of log-signal decay: diffusivity, kurtosis and variance
-- Frequency-dependence fits of D, K and V (linear, square root and squared
-  models). The model with the lowest least-squares error is reported as the best fit
-- DKI fit (DIPY) for FA, MD, AD and RD, and their frequency dependence
+- Frequency-dependence fits of D, K and V against the centroid frequency, for
+  the LTE waveforms, when there are at least three (linear, square root and
+  squared models). The model with
+  the lowest least-squares error is reported as the best fit. With only a few
+  frequencies this choice can change easily
+- DKI fit (DIPY) for FA, MD, AD and RD of each LTE waveform, and their
+  frequency dependence
 
 ### Analysis Outputs
 
@@ -546,7 +559,7 @@ Results are saved in `graphOutputs/<signal_file>/`:
 | `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | Frequency dependence of D, K, V  |
 | `MD_AD_RD.png`                   | Frequency dependence of DKI metrics               |
 | `traj_<signal_file>.png`         | Walker trajectories (`plot_trajectories.py`)      |
-| `results.csv`                    | FA, MD, AD, RD, D, kurtosis and variance per waveform |
+| `results.csv`                    | Per waveform: encoding, centroid frequency (Hz), FA, MD, AD, RD (LTE only), D, kurtosis and variance |
 
 ## Typical Workflow
 

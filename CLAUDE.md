@@ -165,16 +165,19 @@ Where things run:
   `plot_signal.py` and `fit_signal.py` (e.g. powder-averaged signal and
   fitted coefficients) into a plot like the original, so `fit_signal.py`
   only fits.
+- `fit_signal.py` identifies waveforms from their files (`waveform_info` in
+  `analysis_utils.py`): encoding from the b-tensor shape, frequency = centroid
+  of |Q(f)|^2 (follows the pending |Q|^2 vs |G|^2 decision). Frequency fits
+  and DKI use all LTE waveforms. The frequency-model choice (lowest SSE with
+  3 points) is fragile: switching from nominal 0/50/100 Hz to centroids
+  changed the best DKI AD/RD models on the test cylinders.
 - Extend the powder-average fit to include the next order of the series:
   currently log(signal) is fit with a 2nd-order polynomial in b (giving D,
   kurtosis and variance); add the next (b^3) term.
-- It assumes exactly 5 waveforms in a fixed order (LTE 0/50/100 Hz, STE iso,
-  STE aniso). The user plans to generalize this.
 - Output filename typo `poweder_average_signal.csv` (kept for now, README
   documents it).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the
-  STE waveforms at every frequency (see Waveforms and protocol) and the fixed
-  5-waveform assumption removed.
+  STE waveforms at every frequency (see Waveforms and protocol).
 
 ### Waveforms and protocol
 
