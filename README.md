@@ -69,7 +69,7 @@ The project defines three separate environments, one per stage of the pipeline:
 | Environment             | Python | Used for                     | Main packages                                   |
 |-------------------------|--------|------------------------------|-------------------------------------------------|
 | `trimesh-env`           | 3.13   | Creating substrates          | trimesh, matplotlib, scipy, manifold3d          |
-| `disimpy-env`           | 3.9    | Running MC simulations       | disimpy 0.3, cudatoolkit 11.8, manifold3d, tomli |
+| `disimpy-env`           | 3.9    | Running MC simulations       | disimpy 0.3, cudatoolkit 11.8, tomli            |
 | `dipy-env` (`default`)  | 3.13   | Signal/DKI analysis, plotting | dipy, matplotlib                                |
 
 `numpy` and `pandas` are shared by all environments.
@@ -383,6 +383,18 @@ gradient array and simulated in one disimpy run.
 Two batch scripts are provided in `batch/`. **Always submit from the project
 root**: jobs run in the directory `sbatch` was called from, and logs are
 written to `slurm_outputs/`.
+
+After updating the project on the cluster (e.g. `git pull`), update the
+environment on the login node before submitting:
+
+```bash
+pixi install -e disimpy-env
+```
+
+Otherwise the first `pixi run` in each job installs the changes itself, and
+the tasks of a job array that start at the same time try to update the same
+environment at once and can fail (e.g. `Failed to update PyPI packages for
+environment 'disimpy-env'`).
 
 #### Single config: `sbatch.sh`
 
