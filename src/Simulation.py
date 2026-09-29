@@ -17,6 +17,16 @@ import tomli
 import json
 import os
 import argparse
+import socket
+import subprocess
+import time
+from datetime import datetime
+
+from numba import cuda
+
+#Run timing, saved in the metadata file
+started = datetime.now().isoformat(timespec="seconds")
+t_start = time.perf_counter()
 
 #Parse config file argument
 parser = argparse.ArgumentParser()
@@ -110,6 +120,20 @@ def get_unique_filepath(filepath):
         new_filepath = f"{base}_{counter}{ext}"
 
     return new_filepath
+
+#Current git commit of the project, marked '-dirty' if there are uncommitted changes
+#(same as git_commit in src/substrate/common.py)
+def git_commit():
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        return f"{commit}-dirty" if dirty else commit
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
 #Load substrate mesh
 def get_substrate(meshName):
@@ -236,7 +260,10 @@ print("Mega gradient shape:", mega_gradient.shape)
 print("Metadata entries:", len(metadata))
 print(f"\n\nRunning mega simulation.")
 
+time_setup = time.perf_counter() - t_start
+
 #Run sim
+t_sim = time.perf_counter()
 signal = simulations.simulation(
     n_walkers=int(n_walkers),
     diffusivity=diffusivity,
@@ -245,6 +272,7 @@ signal = simulations.simulation(
     substrate=substrate,
     seed=seed
 )
+time_simulation = time.perf_counter() - t_sim
 
 #Normalize signal by walker count
 norm_signal = abs(signal / n_walkers)
@@ -271,6 +299,7 @@ if traj_enabled:
     #even when earlier runs of the same config had trajectories disabled.
     traj_file = f"{os.path.splitext(csv_filename)[0]}_traj.csv"
 
+    t_traj = time.perf_counter()
     trajSignal = simulations.simulation(
         n_walkers=int(traj_n_walkers),
         diffusivity=diffusivity,
@@ -280,14 +309,35 @@ if traj_enabled:
         seed=seed,
         traj=traj_file
     )
+    time_trajectory = time.perf_counter() - t_traj
 else:
     traj_file = None
+    time_trajectory = None
+
+#Where and how the run was done: SLURM job (None outside SLURM), machine,
+#GPU, code version and run times (seconds)
+gpu_name = cuda.get_current_device().name
+run_info = {
+    "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+    "slurm_array_job_id": os.environ.get("SLURM_ARRAY_JOB_ID"),
+    "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID"),
+    "slurm_partition": os.environ.get("SLURM_JOB_PARTITION"),
+    "hostname": socket.gethostname(),
+    "gpu": gpu_name.decode() if isinstance(gpu_name, bytes) else gpu_name,
+    "git_commit": git_commit(),
+    "started": started,
+    "time_setup_s": round(time_setup, 1),
+    "time_simulation_s": round(time_simulation, 1),
+    "time_trajectory_s": None if time_trajectory is None else round(time_trajectory, 1),
+    "time_total_s": round(time.perf_counter() - t_start, 1),
+}
 
 #Both the main simulation and (if enabled) the trajectory simulation completed
 #successfully at this point, so it's safe to write out the run's metadata.
 metadata_dict = {
     "config_file": config_name,
     "mc_seed": int(seed),
+    "run": run_info,
     **config,
 }
 
@@ -299,7 +349,10 @@ print(f"# MC seed: {seed}\n")
 print(f"# Subtrate: {meshName}")
 print(f"# Walkers: {n_walkers}. Steps: {n_t}")
 print(f"# Position: {position}")
-print(f"# Diffusivity: {diffusivity}\n")
+print(f"# Diffusivity: {diffusivity}")
+print(f"# GPU: {run_info['gpu']}. SLURM job: {run_info['slurm_job_id']}")
+print(f"# Time: setup {run_info['time_setup_s']} s, simulation {run_info['time_simulation_s']} s, "
+      f"trajectory {run_info['time_trajectory_s']} s, total {run_info['time_total_s']} s\n")
 print(f"Writing outputs to: {csv_filename}")
 print(f"Writing metadata to: {meta_filename}")
 if traj_enabled:

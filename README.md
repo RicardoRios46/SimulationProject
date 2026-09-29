@@ -483,7 +483,7 @@ files from one run always share a prefix.
 | File                               | Contents                                                        |
 |------------------------------------|-----------------------------------------------------------------|
 | `<config>.csv`                     | Signals, one row per waveform × rotation × b-value (`<config>_1.csv`, ... for later runs) |
-| `<signal>_metadata.json`           | The full config plus the Monte Carlo seed used. Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_metadata.json` |
+| `<signal>_metadata.json`           | The full config, the Monte Carlo seed used and run information (see below). Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_metadata.json` |
 | `<signal>_traj.csv`                | Walker trajectories (only if `[trajectory] enabled = true`). Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_traj.csv` |
 
 The signal CSV has the columns:
@@ -496,7 +496,19 @@ where `R11..R33` is the rotation matrix applied, `bval` is in s/mm², and
 `signal` is normalized by the number of walkers.
 
 The metadata file is only written after the simulation (and trajectory
-simulation, if enabled) completes successfully.
+simulation, if enabled) completes successfully. Its `run` section records
+where and how the run was done, e.g. to compare run times:
+
+| Key                     | Contents                                                     |
+|-------------------------|--------------------------------------------------------------|
+| `slurm_job_id`, `slurm_array_job_id`, `slurm_array_task_id`, `slurm_partition` | SLURM job information (`null` outside SLURM or outside a job array) |
+| `hostname`, `gpu`       | Machine and GPU the simulation ran on                        |
+| `git_commit`            | Git commit of the project (`-dirty` if there were uncommitted changes) |
+| `started`               | Start date and time                                          |
+| `time_setup_s`          | Seconds to load the substrate and waveforms and build the gradients |
+| `time_simulation_s`     | Seconds of the main simulation                               |
+| `time_trajectory_s`     | Seconds of the trajectory simulation (`null` if disabled)    |
+| `time_total_s`          | Total seconds                                                |
 
 ## 4. Signal & DKI Analysis
 
