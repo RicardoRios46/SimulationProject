@@ -172,7 +172,7 @@ for name, param in paramList:
 
 #Plot walker trajectories if available.
 #Simulation.py writes the trajectory next to the signal file, named after it:
-#outputs/<signal>.csv -> outputs/<signal>_traj.csv
+#outputs/<config>/<signal>.csv -> outputs/<config>/<signal>_traj.csv
 traj_file = f"{os.path.splitext(signal_file)[0]}_traj.csv"
 
 if not os.path.exists(traj_file):

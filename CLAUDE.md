@@ -78,9 +78,11 @@ Where things run:
 - Config folders `sim_configs/` and `substrate_configs/` are git-ignored
   except the `*_template.toml` files. `substrate/`, `outputs/`,
   `graphOutputs/` are generated and git-ignored.
-- Simulation outputs from one run share the signal file's name:
-  `outputs/<signal>.csv`, `<signal>_metadata.json`, `<signal>_traj.csv`
-  (numeric suffix `_1`, `_2`, ... added to the signal file if it exists).
+- Simulation outputs go in a folder per config, `outputs/<config>/`, and the
+  files from one run share the signal file's name: `<signal>.csv`,
+  `<signal>_metadata.json`, `<signal>_traj.csv` (numeric suffix `_1`, `_2`,
+  ... added to the signal file if it exists). Outputs from before this change
+  are loose in `outputs/`.
 - SLURM: submit from the project root. `batch/sbatch.sh <config>` for one
   config; `batch/submit_array.sh <list>.txt` for a job array (list file: one
   config path per line, `#` comments allowed).

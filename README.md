@@ -37,7 +37,7 @@ The following directories are git-ignored and are created when the scripts run:
 
 ```text
 substrate/<name>/           # Generated substrates (vertices, faces, PNG preview)
-outputs/                    # Simulation signals, metadata and trajectories
+outputs/<config>/           # Simulation signals, metadata and trajectories
 graphOutputs/<signal_file>/ # Analysis plots and results
 ```
 
@@ -95,7 +95,7 @@ which does not include disimpy.
 1. Create substrate      trimesh-env   src/substrate/*.py     -> substrate/<name>/
                                         (+ substrate_configs/<config>.toml)
 2. Write config          -             sim_configs/<config>.toml
-3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>.csv
+3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>/<config>.csv
 4. Analyze signals       dipy-env      src/graphing.py        -> graphOutputs/<config>.csv/
 ```
 
@@ -452,14 +452,16 @@ sbatch --array=0-2 batch/array_sbatch.sh sim_configs/sweep_radius.txt
 
 ## Simulation Outputs
 
-Outputs are written to `outputs/`, named after the config file. Existing signal
-files are never overwritten: a numeric suffix (`_1`, `_2`, ...) is added
-instead, and the metadata and trajectory files of that run take the same name
-(`<signal>` below), so all files from one run always share a prefix.
+Outputs are written to a folder named after the config file,
+`outputs/<config>/`, and the files are named after the config too. Existing
+signal files are never overwritten: running the same config again writes to
+the same folder with a numeric suffix (`_1`, `_2`, ...), and the metadata and
+trajectory files of that run take the same name (`<signal>` below), so all
+files from one run always share a prefix.
 
 | File                               | Contents                                                        |
 |------------------------------------|-----------------------------------------------------------------|
-| `<config>.csv`                     | Signals, one row per waveform × rotation × b-value              |
+| `<config>.csv`                     | Signals, one row per waveform × rotation × b-value (`<config>_1.csv`, ... for later runs) |
 | `<signal>_metadata.json`           | The full config plus the Monte Carlo seed used. Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_metadata.json` |
 | `<signal>_traj.csv`                | Walker trajectories (only if `[trajectory] enabled = true`). Named after the signal file of the same run, e.g. `<config>_1.csv` → `<config>_1_traj.csv` |
 
@@ -480,13 +482,13 @@ simulation, if enabled) completes successfully.
 Analyze a signal file with:
 
 ```bash
-pixi run -e dipy-env python src/graphing.py outputs/<signal_file>.csv
+pixi run -e dipy-env python src/graphing.py outputs/<config>/<signal_file>.csv
 ```
 
 or with the equivalent Pixi task:
 
 ```bash
-pixi run fitsGraph outputs/<signal_file>.csv
+pixi run fitsGraph outputs/<config>/<signal_file>.csv
 ```
 
 > **Current assumption:** `graphing.py` expects exactly five waveforms, in this
@@ -532,5 +534,5 @@ cp sim_configs/config_template.toml sim_configs/my_run.toml
 pixi run -e disimpy-env python src/Simulation.py sim_configs/my_run.toml
 
 # 4. Analyze the signals
-pixi run fitsGraph outputs/my_run.csv
+pixi run fitsGraph outputs/my_run/my_run.csv
 ```

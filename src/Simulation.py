@@ -153,17 +153,18 @@ def read_shape(filename):
 #Load substrate
 substrate = get_substrate(meshName)
 
-#Ensure the outputs directory exists (part of project structure, but guard anyway)
-os.makedirs("outputs", exist_ok=True)
+#All outputs of a config go in their own folder, outputs/<config_name>/
+output_dir = f"outputs/{config_name}"
+os.makedirs(output_dir, exist_ok=True)
 
-#Create unique signal output file
+#Create unique signal output file (runs of the same config share the folder)
 csv_filename = get_unique_filepath(
-    f"outputs/{config_name}.csv"
+    f"{output_dir}/{config_name}.csv"
 )
 
 #Metadata output file (kept separate from the CSV, since CSV has no standard comment syntax).
-#Named after the signal file actually written (e.g. outputs/run_1.csv ->
-#outputs/run_1_metadata.json) so the pair always matches.
+#Named after the signal file actually written (e.g. outputs/run/run_1.csv ->
+#outputs/run/run_1_metadata.json) so the pair always matches.
 #NOTE: metadata is only written to disk after the simulation(s) below complete
 #successfully, so a failed run doesn't leave behind metadata for a signal
 #file that was never produced.
@@ -266,7 +267,7 @@ signal_df.to_csv(csv_filename, index=False)
 #Run trajectory sim (optional, controlled via [trajectory] in the config)
 if traj_enabled:
     #Name the trajectory file after the signal file actually written (e.g.
-    #outputs/run_1.csv -> outputs/run_1_traj.csv) so the pair always matches,
+    #outputs/run/run_1.csv -> outputs/run/run_1_traj.csv) so the pair always matches,
     #even when earlier runs of the same config had trajectories disabled.
     traj_file = f"{os.path.splitext(csv_filename)[0]}_traj.csv"
 
