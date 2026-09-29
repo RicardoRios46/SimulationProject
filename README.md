@@ -28,17 +28,22 @@ The project uses:
 │   ├── compare_waveforms.py # Overlay several waveforms to compare them (dipy-env)
 │   ├── waveform_utils.py   # Shared waveform calculations
 │   └── substrate/          # Substrate generation scripts (trimesh-env)
+│       └── archive/        # Unmaintained beaded axon scripts, kept for reference
 ├── waveforms/              # Gradient waveforms (N x 3 CSV)
 ├── pixi.toml               # Pixi environments and tasks
+├── pixi.lock               # Locked package versions (commit with pixi.toml)
+├── CLAUDE.md               # Notes for Claude Code sessions (conventions, project state)
+├── LICENSE
 └── README.md
 ```
 
 The following directories are git-ignored and are created when the scripts run:
 
 ```text
-substrate/<name>/           # Generated substrates (vertices, faces, PNG preview)
+substrate/<name>/           # Generated substrates (mesh CSVs, params JSON, PNG previews)
 outputs/<config>/           # Simulation signals, metadata and trajectories
 graphOutputs/<signal_file>/ # Analysis plots and results (signal file name without .csv)
+graphOutputs/waveforms/     # Waveform plots and comparisons
 ```
 
 All scripts use paths relative to the project root, so **always run commands
