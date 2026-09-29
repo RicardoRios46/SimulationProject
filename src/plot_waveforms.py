@@ -25,8 +25,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-GAMMA = 2.6752218744e8  # Proton gyromagnetic ratio (rad/s/T)
-AXES = ["x", "y", "z"]
+from waveform_utils import AXES, analyze_waveform
 
 parser = argparse.ArgumentParser(description="Plot gradient waveform files.")
 parser.add_argument("files", nargs="+", help="Waveform CSV files (N x 3)")
@@ -41,50 +40,19 @@ parser.add_argument("--output-dir", default="graphOutputs/waveforms",
 args = parser.parse_args()
 
 os.makedirs(args.output_dir, exist_ok=True)
-dt = args.raster_time_ms * 1e-3  # s
 
 for file in args.files:
-    name = os.path.splitext(os.path.basename(file))[0]
-
-    data = np.loadtxt(file, delimiter=",")
-    if data.ndim != 2 or data.shape[1] != 3:
-        raise ValueError(f"{file}: expected an N x 3 CSV (x,y,z columns), got shape {data.shape}.")
-
-    g = data * args.gradient_scale            # T/m
-    t = np.arange(len(g)) * dt * 1e3          # ms
-    q = GAMMA * np.cumsum(g, axis=0) * dt     # rad/m
-
-    # b-tensor in s/mm^2
-    B = (q.T @ q) * dt * 1e-6
-    b = np.trace(B)
-    eigenvalues = np.sort(np.linalg.eigvalsh(B))[::-1]
-
-    # Encoding spectrum, zero-padded for a finer frequency resolution
-    n_fft = max(2**16, len(q))
-    freqs = np.fft.rfftfreq(n_fft, dt)
-    power = np.abs(np.fft.rfft(q, n=n_fft, axis=0) * dt) ** 2
-    power /= power.max()
-
-    # Centroid (power-weighted mean) frequencies of the dephasing spectrum
-    # |Q(f)|^2, over the full spectrum (not only the plotted range). Per axis,
-    # and combined from the total power of the three axes, which does not
-    # depend on the waveform orientation. NOTE: the dephasing spectrum is used
-    # here; the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 would give
-    # higher centroids.
-    axis_power = power.sum(axis=0)
-    has_power = axis_power > 1e-12 * axis_power.max()
-    centroids = [freqs @ power[:, i] / axis_power[i] if has_power[i] else None for i in range(3)]
-    centroid_combined = freqs @ power.sum(axis=1) / power.sum()
-
-    q_norm = np.linalg.norm(q, axis=1)
-    refocusing = q_norm[-1] / q_norm.max()
+    w = analyze_waveform(file, args.raster_time_ms, args.gradient_scale)
+    name, t, g, q, b = w["name"], w["t"], w["g"], w["q"], w["b"]
+    freqs, centroids, centroid_combined = w["freqs"], w["centroids"], w["centroid_combined"]
+    power = w["power"] / w["power"].max()
 
     print(f"\n{name}")
     print(f"  Duration:            {len(g) * args.raster_time_ms:.2f} ms ({len(g)} rows)")
-    print(f"  Max |g| per axis:    {', '.join(f'{v:.1f}' for v in np.abs(data).max(axis=0))} (file units)")
+    print(f"  Max |g| per axis:    {', '.join(f'{v:.1f}' for v in np.abs(w['data']).max(axis=0))} (file units)")
     print(f"  b-value:             {b:.1f} s/mm^2 (at the file amplitude)")
-    print(f"  B eigenvalues / b:   {', '.join(f'{v:.3f}' for v in eigenvalues / b)}")
-    print(f"  |q(end)| / max |q|:  {refocusing:.2e} (0 = refocused)")
+    print(f"  B eigenvalues / b:   {', '.join(f'{v:.3f}' for v in w['eigenvalues'] / b)}")
+    print(f"  |q(end)| / max |q|:  {w['refocusing']:.2e} (0 = refocused)")
     print(f"  Centroid frequency:  "
           + ", ".join(f"{axis} {c:.1f}" for axis, c in zip(AXES, centroids) if c is not None)
           + f", combined {centroid_combined:.1f} Hz")
@@ -107,7 +75,7 @@ for file in args.files:
     axs[1, 0].set(title="Encoding spectrum (dephasing)", xlabel="Frequency (Hz)",
                   ylabel="|Q(f)|² (normalized)", xlim=(0, args.fmax))
 
-    axs[1, 1].bar(["λ1", "λ2", "λ3"], eigenvalues / b, color="gray")
+    axs[1, 1].bar(["λ1", "λ2", "λ3"], w["eigenvalues"] / b, color="gray")
     axs[1, 1].set(title=f"b-tensor eigenvalues (b = {b:.0f} s/mm²)", ylabel="λ / b", ylim=(0, 1))
 
     for ax in axs.flat[:3]:
