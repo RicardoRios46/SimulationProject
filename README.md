@@ -322,8 +322,15 @@ pixi run -e dipy-env python src/plot_waveforms.py waveforms/<file>.csv [more fil
 For each file this saves `graphOutputs/waveforms/<file>.png` with the gradient
 g(t), the dephasing q(t), the encoding power spectrum |Q(f)|² per axis, and the
 normalized b-tensor eigenvalues, and prints a summary: duration, maximum
-gradient, b-value at the file amplitude, b-tensor eigenvalues, and whether q
-returns to 0 at the end (refocusing). Options: `--raster-time-ms` and
+gradient, b-value at the file amplitude, b-tensor eigenvalues, whether q
+returns to 0 at the end (refocusing), and the centroid frequencies.
+
+The centroid frequency is the power-weighted mean frequency of the dephasing
+spectrum |Q(f)|², computed over the full spectrum. It is shown per axis
+(dashed lines) and combined over the three axes (solid line), using their
+total power. The combined value does not depend on the waveform orientation;
+the per-axis values do. Note that the gradient spectrum |G(f)|² = (2πf)²|Q(f)|²
+would give higher centroids. Options: `--raster-time-ms` and
 `--gradient-scale` (same defaults as the simulation config), `--fmax` for the
 spectrum range, and `--output-dir`.
 

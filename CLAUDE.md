@@ -87,10 +87,12 @@ Where things run:
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
-  new waveforms with `src/plot_waveforms.py` (g, q, spectrum, b-tensor). At
-  file amplitude the current waveforms all have b = 4500 s/mm² (components
-  1500). STEiso and STEaniso both have an isotropic b-tensor; they differ in
-  the spectral content per axis.
+  new waveforms with `src/plot_waveforms.py` (g, q, spectrum, centroid
+  frequencies, b-tensor). At file amplitude the current waveforms all have
+  b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
+  b-tensor; they differ in the spectral content per axis. Centroid frequencies
+  (dephasing spectrum): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
+  axes; STEaniso x/y/z 8.4/47.9/98.8 Hz (combined 51.3 Hz).
 - Shell scripts must keep LF line endings (enforced in `.gitattributes`).
 - `src/substrate/archive/` holds unmaintained beaded axon scripts kept for
   reference; don't update them unless asked.
@@ -156,10 +158,10 @@ Where things run:
 - Add the M restriction tensor (related to the spectral content of the
   waveform) to `src/plot_waveforms.py`. The user will point to the literature
   for how to calculate it.
-- Calculate the centroid frequency of each waveform's encoding spectrum and
-  show it as a vertical line in the spectrum panel of `src/plot_waveforms.py`.
-  Confirm the definition with the user first (e.g. power-weighted mean
-  frequency of |Q(f)|^2, per axis or combined).
+- `src/plot_waveforms.py` uses the dephasing spectrum |Q(f)|^2 for the
+  encoding spectrum and the centroid frequencies. The user is checking with a
+  collaborator whether the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 is
+  the usual choice; it may need to change (it gives higher centroids).
 - Create a separate script to compare several waveform files on the same axes.
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and

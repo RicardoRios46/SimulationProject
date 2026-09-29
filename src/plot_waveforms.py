@@ -7,7 +7,8 @@ For each file, one figure with:
     - Gradient g(t) per axis
     - Dephasing q(t) = gamma * integral of g dt, per axis (should end at 0 if
       the waveform is refocused; files already include the 180° pulse)
-    - Encoding power spectrum |Q(f)|^2 per axis
+    - Encoding power spectrum |Q(f)|^2 per axis, with centroid frequencies
+      per axis (dashed) and combined over the three axes (solid)
     - Eigenvalues of the b-tensor B = integral of q q^T dt, normalized by b
       (LTE ~ 1, 0, 0; isotropic STE ~ 1/3, 1/3, 1/3)
 and a printed summary per file.
@@ -64,6 +65,17 @@ for file in args.files:
     power = np.abs(np.fft.rfft(q, n=n_fft, axis=0) * dt) ** 2
     power /= power.max()
 
+    # Centroid (power-weighted mean) frequencies of the dephasing spectrum
+    # |Q(f)|^2, over the full spectrum (not only the plotted range). Per axis,
+    # and combined from the total power of the three axes, which does not
+    # depend on the waveform orientation. NOTE: the dephasing spectrum is used
+    # here; the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 would give
+    # higher centroids.
+    axis_power = power.sum(axis=0)
+    has_power = axis_power > 1e-12 * axis_power.max()
+    centroids = [freqs @ power[:, i] / axis_power[i] if has_power[i] else None for i in range(3)]
+    centroid_combined = freqs @ power.sum(axis=1) / power.sum()
+
     q_norm = np.linalg.norm(q, axis=1)
     refocusing = q_norm[-1] / q_norm.max()
 
@@ -73,17 +85,26 @@ for file in args.files:
     print(f"  b-value:             {b:.1f} s/mm^2 (at the file amplitude)")
     print(f"  B eigenvalues / b:   {', '.join(f'{v:.3f}' for v in eigenvalues / b)}")
     print(f"  |q(end)| / max |q|:  {refocusing:.2e} (0 = refocused)")
+    print(f"  Centroid frequency:  "
+          + ", ".join(f"{axis} {c:.1f}" for axis, c in zip(AXES, centroids) if c is not None)
+          + f", combined {centroid_combined:.1f} Hz")
 
     fig, axs = plt.subplots(2, 2, figsize=(13, 8))
 
     for i, axis in enumerate(AXES):
         axs[0, 0].plot(t, g[:, i] * 1e3, label=axis)
         axs[0, 1].plot(t, q[:, i] * 1e-6, label=axis)
-        axs[1, 0].plot(freqs, power[:, i], label=axis)
+        line, = axs[1, 0].plot(freqs, power[:, i], label=axis)
+        if centroids[i] is not None:
+            axs[1, 0].axvline(centroids[i], color=line.get_color(), linestyle="--",
+                              label=f"{axis} centroid: {centroids[i]:.1f} Hz")
+
+    axs[1, 0].axvline(centroid_combined, color="black",
+                      label=f"combined centroid: {centroid_combined:.1f} Hz")
 
     axs[0, 0].set(title="Gradient", xlabel="Time (ms)", ylabel="g (mT/m)")
     axs[0, 1].set(title="Dephasing", xlabel="Time (ms)", ylabel="q (rad/µm)")
-    axs[1, 0].set(title="Encoding spectrum", xlabel="Frequency (Hz)",
+    axs[1, 0].set(title="Encoding spectrum (dephasing)", xlabel="Frequency (Hz)",
                   ylabel="|Q(f)|² (normalized)", xlim=(0, args.fmax))
 
     axs[1, 1].bar(["λ1", "λ2", "λ3"], eigenvalues / b, color="gray")
@@ -91,7 +112,7 @@ for file in args.files:
 
     for ax in axs.flat[:3]:
         ax.grid(True, linestyle="--", alpha=0.5)
-        ax.legend()
+        ax.legend(fontsize=8)
 
     fig.suptitle(name)
     plt.tight_layout()
