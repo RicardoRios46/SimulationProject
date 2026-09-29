@@ -81,8 +81,8 @@ Where things run:
 - Simulation outputs go in a folder per config, `outputs/<config>/`, and the
   files from one run share the signal file's name: `<signal>.csv`,
   `<signal>_metadata.json`, `<signal>_traj.csv` (numeric suffix `_1`, `_2`,
-  ... added to the signal file if it exists). Outputs from before this change
-  are loose in `outputs/`.
+  ... added to the signal file if it exists). `graphing.py` writes to
+  `graphOutputs/<signal>/` (signal file name without `.csv`).
 - SLURM: submit from the project root. `batch/sbatch.sh <config>` for one
   config; `batch/submit_array.sh <list>.txt` for a job array (list file: one
   config path per line, `#` comments allowed).

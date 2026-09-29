@@ -25,7 +25,8 @@ parser.add_argument("signals", type=str)
 args = parser.parse_args()
 
 signal_file = args.signals
-graph_title = os.path.basename(signal_file)
+#Signal file name without extension, e.g. outputs/run/run_1.csv -> run_1
+graph_title = Path(signal_file).stem
 
 #Create output dir
 output = f"graphOutputs/{graph_title}"
@@ -326,7 +327,7 @@ for metric_name, diff, ax in metrics:
 
 plt.tight_layout()
 
-output_path = f"graphOutputs/{Path(csv_file).name}/MD_AD_RD.png"
+output_path = f"{output}/MD_AD_RD.png"
 plt.savefig(output_path, dpi=300)
 
 #Export results

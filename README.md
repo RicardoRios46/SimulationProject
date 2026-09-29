@@ -38,7 +38,7 @@ The following directories are git-ignored and are created when the scripts run:
 ```text
 substrate/<name>/           # Generated substrates (vertices, faces, PNG preview)
 outputs/<config>/           # Simulation signals, metadata and trajectories
-graphOutputs/<signal_file>/ # Analysis plots and results
+graphOutputs/<signal_file>/ # Analysis plots and results (signal file name without .csv)
 ```
 
 All scripts use paths relative to the project root, so **always run commands
@@ -96,7 +96,7 @@ which does not include disimpy.
                                         (+ substrate_configs/<config>.toml)
 2. Write config          -             sim_configs/<config>.toml
 3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>/<config>.csv
-4. Analyze signals       dipy-env      src/graphing.py        -> graphOutputs/<config>.csv/
+4. Analyze signals       dipy-env      src/graphing.py        -> graphOutputs/<config>/
 ```
 
 ## 1. Substrates
