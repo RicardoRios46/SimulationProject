@@ -114,10 +114,16 @@ Where things run:
     ~3.6 min); 3600 gradients at n_t 1000 took 46 s vs 34 s for 1800. Setup
     (mesh loading) ~30 s for the spheres, ~55-70 s for the cylinders. The
     metadata `run` section records the times of each run.
-  - Monte Carlo noise at 100k walkers (different random walks across the n_t
-    runs): signal differences up to ~0.003; K and V of the nearly Gaussian
-    spheres signal (K ~0.05-0.15) scatter by ~±0.03 (20-50%), the
-    cylinders' K by ~±0.01. The spheres' V < 0 in order-3 fits appeared in
+  - Monte Carlo noise, from the seed test (`sim_configs/seedtest_*`, 5 seeds
+    + seed 123, n_t 10000, 100k walkers): SD of the powder-averaged signal
+    ~0.0015 from b ~1000 on, about constant in b, so the relative SD grows
+    as S falls (spheres 4% at b 4500, cylinders 1%). SD of the fits, spheres
+    (nearly Gaussian, mostly extra-cellular): V 8-15%, order-2 K 7-14%,
+    order-3 K (b <= 3) up to ~37%; cylinders: K, V ~0.5-2%; D, MD, FA
+    precise for both (SD <= 0.005). SD scales as 1/sqrt(walkers), run time
+    linearly: for the spheres' V to ~2-5% (LTE50 / STEiso), ~1-2M walkers
+    (~36-72 min at n_t 10000, 1800 gradients). V_iso, a difference of
+    variances, needs more. The spheres' V < 0 in order-3 fits appeared in
     independent runs, so it is not only noise.
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
@@ -159,11 +165,21 @@ Where things run:
   CUDA >=12.8 (first release supporting this GPU generation), plus updating
   disimpy for numpy>=2. Any change must keep working on the cluster, so test
   there too. Start from the kernel failure described under Environments.
-- Monte Carlo noise: runs with different random walks scatter much more
-  than expected (see Simulation settings). A seed test (same config, several
-  seeds, `sim_configs/seedtest_*`) is prepared to measure the run-to-run
-  scatter of D, K, V; it scales as 1/sqrt(walkers), which gives the walkers
-  needed for a target precision on V_iso.
+- Weighted cumulant fit: the signal noise is about constant in b, so the
+  noise of log S grows as 1/S and an unweighted log fit gives the noisy
+  high-b points too much weight. Consider weights ~S^2 in `fit_cumulant`
+  (see Monte Carlo noise under Simulation settings).
+- SLURM resources: the batch scripts request 4 CPUs, 32 GB and 12 h. The
+  seed test (job 209524, `uniform`, 100k walkers, n_t 10000, ~4.5 min per
+  task; reportseff) used ~15% CPU (~0.6 core), memory ~1-1.3 GB for most
+  tasks and ~6.4-7.4 GB for two cylinder tasks, and 0.6% of the time. The
+  defaults (`#SBATCH` in `batch/sbatch.sh` and `batch/array_sbatch.sh`) could
+  be reduced, e.g. 1 CPU, 16 GB, 4 h, to not take cluster resources that are
+  not used. The user decided to wait: `intra` runs take much longer (the
+  initial positions inside the objects are computed first) and may need more
+  resources, so check them first (`seff <jobid>`, reportseff, or
+  `sacct -j <jobid> --format=JobID,MaxRSS,TotalCPU,Elapsed`). Memory also
+  grows with walkers, gradients and n_t.
 - Periodic boundaries: `periodic = true` has had issues in the past, and the
   goal is to make it work with the new substrates. Known cause to address:
   packed objects near the domain edge extend past it and do not wrap around,
