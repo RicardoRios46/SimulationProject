@@ -78,18 +78,36 @@ def waveform_info(df, signal_file):
     return info
 
 
-def fit_cumulant(b, signal, b_max=10):
-    """Fit log(signal) = A b^2 + B b + C, with b in ms/µm² (only b <= b_max).
+def fit_cumulant(b, signal, order=2, fix_intercept=False, b_max=10):
+    """Fit the cumulant expansion of log(signal), with b in ms/µm² (only b <= b_max):
+        order 2:  log(signal) = C + B b + A b^2
+        order 3:  log(signal) = C + B b + A b^2 + E b^3
+    With fix_intercept, C = 0 (signal = 1 at b = 0).
 
-    Returns a dict with the coefficients A, B, C and
-    D = -B (µm²/ms), K = 6A/D² and V = 2A (µm⁴/ms²).
+    Following log S = -b D + (b^2/2) V - (b^3/6) k3 + ..., returns a dict with
+    the coefficients A, B, C, E (E = 0 for order 2) and
+        D = -B (µm²/ms), V = 2A (µm⁴/ms²), K = 3V/D² = 6A/D²,
+        k3 = -6E (µm⁶/ms³), skewness = k3 / V^(3/2) (NaN if V <= 0 or order 2).
     """
     mask = b <= b_max
-    A, B, C = np.polyfit(b[mask], np.log(signal[mask]), 2)
+    b, y = b[mask], np.log(signal[mask])
+    if fix_intercept:
+        powers = np.arange(order, 0, -1)
+        coeffs = np.linalg.lstsq(b[:, None] ** powers, y, rcond=None)[0]
+        coeffs = np.append(coeffs, 0.0)
+    else:
+        coeffs = np.polyfit(b, y, order)
+    if order == 2:
+        coeffs = np.insert(coeffs, 0, 0.0)
+    E, A, B, C = coeffs
     if abs(A) < 1e-9:
         A = 0
     D = -B
-    return {"A": A, "B": B, "C": C, "D": D, "K": (6 * A) / (D**2), "V": A * 2}
+    V = A * 2
+    k3 = -6 * E
+    skewness = k3 / V**1.5 if order == 3 and V > 0 else np.nan
+    return {"A": A, "B": B, "C": C, "E": E, "D": D, "K": (6 * A) / (D**2), "V": V,
+            "k3": k3, "skewness": skewness}
 
 
 #Frequency dependence models: value = slope * g(f) + intercept

@@ -538,28 +538,35 @@ The waveform files must still be the ones used in the simulation.
 `fit_signal.py` performs:
 
 - Powder averaging of the signal over rotations
-- 2nd order fit of log-signal decay: diffusivity, kurtosis and variance
+- Cumulant fit of the log-signal decay (b in ms/µm²), 2nd order by default:
+  log S = C + B b + A b², giving D = −B, V = 2A and kurtosis K = 3V/D². With
+  `--order 3`, the b³ term is added (log S = C + B b + A b² + E b³), giving
+  also the third cumulant k3 = −6E (µm⁶/ms³) and the skewness k3/V^(3/2) (not
+  defined for V ≤ 0, and very large when V is close to 0). The intercept C is
+  fitted, or fixed at 0 (S = 1 at b = 0) with `--fix-intercept`
 - Frequency-dependence fits of D, K and V against the centroid frequency, for
   the LTE waveforms, when there are at least three (linear, square root and
-  squared models). The model with
-  the lowest least-squares error is reported as the best fit. With only a few
-  frequencies this choice can change easily
+  squared models). The model with the lowest least-squares error is reported
+  as the best fit. With only a few frequencies this choice can change easily
 - DKI fit (DIPY) for FA, MD, AD and RD of each LTE waveform, and their
   frequency dependence
 
 ### Analysis Outputs
 
-Results are saved in `graphOutputs/<signal_file>/`:
+Results are saved in `graphOutputs/<signal_file>/`. `fit_signal.py`
+overwrites its files on each run, whatever the options, so copy them before
+running again with other options to compare:
 
 | File                             | Contents                                          |
 |----------------------------------|---------------------------------------------------|
 | `poweder_average_signal.csv`     | Powder-averaged signal per waveform and b-value   |
+| `cumulant_fit.csv`               | Fit order, fixed intercept or not, and coefficients C, B, A, E per waveform |
 | `signal_<signal_file>.svg`       | Signal decay (`plot_signal.py`)                   |
 | `signal_fit_<signal_file>.svg`   | Signal decay with the fits                        |
 | `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | Frequency dependence of D, K, V  |
 | `MD_AD_RD.png`                   | Frequency dependence of DKI metrics               |
 | `traj_<signal_file>.png`         | Walker trajectories (`plot_trajectories.py`)      |
-| `results.csv`                    | Per waveform: encoding, centroid frequency (Hz), FA, MD, AD, RD (LTE only), D, kurtosis and variance |
+| `results.csv`                    | Per waveform: encoding, centroid frequency (Hz), FA, MD, AD, RD (LTE only), D, kurtosis and variance (and k3, skewness with `--order 3`) |
 
 ## Typical Workflow
 

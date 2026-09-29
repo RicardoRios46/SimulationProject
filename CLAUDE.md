@@ -171,9 +171,11 @@ Where things run:
   and DKI use all LTE waveforms. The frequency-model choice (lowest SSE with
   3 points) is fragile: switching from nominal 0/50/100 Hz to centroids
   changed the best DKI AD/RD models on the test cylinders.
-- Extend the powder-average fit to include the next order of the series:
-  currently log(signal) is fit with a 2nd-order polynomial in b (giving D,
-  kurtosis and variance); add the next (b^3) term.
+- `fit_signal.py --order 3` adds the b^3 term (k3 = -6E, skewness
+  k3/V^1.5); `--fix-intercept` sets C = 0. On the 6 b-value test outputs the
+  order-3 fit is unstable for the spheres (V < 0 at 50/100 Hz and STEiso):
+  more b-values are needed (simulations being planned). Possible
+  improvement: weight the log fit (high-b points are noisier).
 - Output filename typo `poweder_average_signal.csv` (kept for now, README
   documents it).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the

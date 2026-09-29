@@ -1,7 +1,8 @@
 """
 Signal fitting and DKI analysis
 Fits the powder-averaged signal (mean over rotations) of each waveform for
-the diffusivity D, kurtosis K and variance V, fits the frequency dependence of
+the diffusivity D, kurtosis K and variance V (and, with --order 3, the third
+cumulant k3 and the skewness), fits the frequency dependence of
 D, K and V of the LTE waveforms (linear, square root and squared models), and
 fits DKI (DIPY) on each LTE waveform for FA, MD, AD and RD.
 
@@ -10,16 +11,23 @@ analysis_utils.waveform_info): the encoding (LTE, STE or other) from the
 b-tensor shape, and the frequency as the centroid frequency of the dephasing
 spectrum |Q(f)|^2.
 
-Outputs in graphOutputs/<signal>/:
+Cumulant fit of log(signal), b in ms/µm²:
+    order 2 (default):  log S = C + B b + A b^2
+    order 3:            log S = C + B b + A b^2 + E b^3
+    D = -B, V = 2A, K = 3V/D², k3 = -6E, skewness = k3 / V^(3/2)
+C is fitted, or fixed at 0 (S = 1 at b = 0) with --fix-intercept.
+
+Outputs in graphOutputs/<signal>/ (overwritten by each run, whatever the options):
     poweder_average_signal.csv      Powder-averaged signal per waveform and b-value
+    cumulant_fit.csv                Fit settings and coefficients C, B, A, E per waveform
     signal_fit_<signal>.svg         Signal decay with the fits
     Diffusivity_/Kurtosis_/Variance_<signal>.svg   Frequency dependence of D, K, V (LTE)
     MD_AD_RD.png                    Frequency dependence of the DKI metrics (LTE)
     results.csv                     Encoding, frequency, FA, MD, AD, RD, D, kurtosis
-                                    and variance per waveform
+                                    and variance (and k3, skewness for order 3) per waveform
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/fit_signal.py outputs/<config>/<signal>.csv
+    pixi run -e dipy-env python src/fit_signal.py outputs/<config>/<signal>.csv [--order 3] [--fix-intercept]
 """
 
 import argparse
@@ -35,7 +43,12 @@ from analysis_utils import (output_dir, load_signals, powder_average, waveform_i
 
 parser = argparse.ArgumentParser(description="Fit the signal (D, K, V) and DKI.")
 parser.add_argument("signals", help="Signal CSV written by Simulation.py")
+parser.add_argument("--order", type=int, choices=[2, 3], default=2,
+                    help="Order of the polynomial in b fitted to log(signal) (default 2)")
+parser.add_argument("--fix-intercept", action="store_true",
+                    help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
 args = parser.parse_args()
+print(f"Cumulant fit: order {args.order}, intercept {'fixed at 0' if args.fix_intercept else 'fitted'}")
 
 name, output = output_dir(args.signals)
 df = load_signals(args.signals)
@@ -60,26 +73,36 @@ for wf in waveforms:
     b_arr = np.array(wf_data.index) / 1000
     signals = wf_data.values
 
-    fit = fit_cumulant(b_arr, signals)
+    fit = fit_cumulant(b_arr, signals, order=args.order, fix_intercept=args.fix_intercept)
     fits[wf] = fit
 
     label_name = info[wf]["label"]
-    y_fit = np.exp(fit["A"] * (x_fit**2) + fit["B"] * x_fit + fit["C"])
+    y_fit = np.exp(np.polyval([fit["E"], fit["A"], fit["B"], fit["C"]], x_fit))
 
+    fit_label = f"D: {fit['D']:.4f} µm²/ms\nK: {fit['K']:.4f}\nV: {fit['V']:.4f} µm⁴/ms²"
+    if args.order == 3:
+        fit_label += f"\nk3: {fit['k3']:.4f} µm⁶/ms³\nSkewness: {fit['skewness']:.3f}"
     ax.scatter(b_arr, signals, marker='o', label=rf"$\bf{{{label_name}\ Data}}$")
-    ax.plot(x_fit, y_fit, linestyle='--',
-            label=f"D: {fit['D']:.4f} µm²/ms\nK: {fit['K']:.4f}\nV: {fit['V']:.4f} µm⁴/ms²")
+    ax.plot(x_fit, y_fit, linestyle='--', label=fit_label)
 
 ax.set_yscale('log')
 ax.set_xlabel("b-value (ms/µm²)")
 ax.set_ylabel("Normalized Signal ($S/S_0$)")
-ax.set_title("Signal Decay")
+ax.set_title(f"Signal Decay (order {args.order} fit)")
 ax.grid(True, which="both", linestyle='--', alpha=0.5)
 ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1))
 
 plt.subplots_adjust(right=0.7)
 plt.savefig(f"{output}/signal_fit_{name}.svg", dpi=300, bbox_inches='tight')
 plt.close(fig)
+
+#Save the fit coefficients, e.g. to plot the fitted curves again
+pd.DataFrame([{
+    "Waveform": info[wf]["label"],
+    "Order": args.order,
+    "FixedIntercept": args.fix_intercept,
+    **{key: fits[wf][key] for key in ["C", "B", "A", "E"]},
+} for wf in waveforms]).to_csv(f"{output}/cumulant_fit.csv", index=False)
 
 #Frequency dependence of D, K and V for the LTE waveforms
 freq = np.array([info[wf]["frequency"] for wf in lte])
@@ -190,11 +213,13 @@ for wf in waveforms:
         "D": fits[wf]["D"],
         "Kurtosis": fits[wf]["K"],
         "Variance": fits[wf]["V"],
+        "k3": fits[wf]["k3"],
+        "Skewness": fits[wf]["skewness"],
     })
 
-results_df = pd.DataFrame(
-    results_rows,
-    columns=["Waveform", "Encoding", "Frequency", "FA", "MD", "AD", "RD", "D", "Kurtosis", "Variance"],
-)
+columns = ["Waveform", "Encoding", "Frequency", "FA", "MD", "AD", "RD", "D", "Kurtosis", "Variance"]
+if args.order == 3:
+    columns += ["k3", "Skewness"]
+results_df = pd.DataFrame(results_rows, columns=columns)
 results_df.to_csv(f"{output}/results.csv", index=False)
 print(f"\nSaved results to {output}/")
