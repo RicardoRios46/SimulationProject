@@ -139,6 +139,13 @@ Where things run:
   CUDA >=12.8 (first release supporting this GPU generation), plus updating
   disimpy for numpy>=2. Any change must keep working on the cluster, so test
   there too. Start from the kernel failure described under Environments.
+- Time step convergence: with `n_t = 1000` over the 58.16 ms waveforms, the
+  step length is ~0.59 µm (D = 1 µm²/ms), comparable to the cylinder radii
+  (0.2-3 µm, mean 0.6); old production runs used `n_t = 10000` (0.19 µm).
+  Before production, run the same config at n_t = 1000/5000/10000 and check
+  where the signal and D, K, V stop changing, and record the job run time
+  for each (cost scales roughly with walkers x steps x gradients), to choose
+  n_t for production.
 - Periodic boundaries: `periodic = true` has had issues in the past, and the
   goal is to make it work with the new substrates. Known cause to address:
   packed objects near the domain edge extend past it and do not wrap around,
