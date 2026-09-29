@@ -165,6 +165,12 @@ Where things run:
 - Create production-ready substrates (spheres, cylinders, CATERPillar) with
   the current generators, once the periodic boundary work is done, to
   replace the old ones in the simulations.
+- Denser sphere packing: the template spheres substrate has a volume fraction
+  of only 0.17, so most of the signal (with `uniform` walkers) comes from the
+  extra-cellular space. The user attributes the unstable order-3 fits of the
+  spheres to this (see Analysis). A sphere substrate with more packing
+  (e.g. more `n_objects`, smaller `min_gap`) may be needed to reduce the
+  extra-cellular space; this matters when measuring the intra-cellular signal.
 
 ### Analysis (`src/fit_powder_average.py`, `src/fit_tensor.py`)
 
@@ -179,10 +185,18 @@ Where things run:
   points) is fragile: switching from nominal 0/50/100 Hz to centroids
   changed the best DKI AD/RD models on the test cylinders.
 - `fit_powder_average.py --order 3` adds the b^3 term (k3 = -6E, skewness
-  k3/V^1.5); `--fix-intercept` sets C = 0. On the 6 b-value test outputs the
-  order-3 fit is unstable for the spheres (V < 0 at 50/100 Hz and STEiso):
-  more b-values are needed (simulations being planned). Possible
-  improvement: weight the log fit (high-b points are noisier).
+  k3/V^1.5); `--fix-intercept` sets C = 0. Pilot runs (2026-09-29,
+  `sim_configs/pilot_*.toml`: 19 b-values 0-4500, 100k walkers, `uniform`,
+  n_t 1000, template substrates) showed it is not Monte Carlo noise: for the
+  cylinders order 3 is stable, for the spheres V is ~0 or negative at
+  50/100 Hz and STEiso (signal nearly Gaussian, K ~0.05, mostly
+  extra-cellular). Order-2 K rises with the maximum b fitted (truncation
+  bias); order 3 is stable up to b ~2.5-3 ms/µm² and drifts beyond. Options:
+  a `--b-max` option for the fit (fit_cumulant already has b_max; the user
+  will decide on it when the intra/extra runs start), weighting the log fit
+  (high-b points are noisier), intra/extra positions, denser spheres (see
+  Substrates). Since Monte Carlo noise is small, future test runs can use
+  10 b-values instead of 19 (user's decision).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the
   STE waveforms at every frequency (see Waveforms and protocol).
 
