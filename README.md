@@ -24,6 +24,7 @@ The project uses:
 ├── src/
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
 │   ├── graphing.py         # Signal and DKI analysis (dipy-env)
+│   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
 │   └── substrate/          # Substrate generation scripts (trimesh-env)
 ├── waveforms/              # Gradient waveforms (N x 3 CSV)
 ├── pixi.toml               # Pixi environments and tasks
@@ -309,6 +310,22 @@ metadata JSON.
 **Waveforms** (`waveforms/*.csv`): an N x 3 CSV with no header and one row per
 time step (`x,y,z` gradient amplitudes). Both LTE and STE waveforms use this
 format, e.g. as exported from MATLAB. Rows are spaced by `raster_time_ms`.
+Waveforms must already include the effect of the 180° refocusing pulse (sign
+flip of the second half).
+
+To check a waveform before simulating it, plot it with:
+
+```bash
+pixi run -e dipy-env python src/plot_waveforms.py waveforms/<file>.csv [more files...]
+```
+
+For each file this saves `graphOutputs/waveforms/<file>.png` with the gradient
+g(t), the dephasing q(t), the encoding power spectrum |Q(f)|² per axis, and the
+normalized b-tensor eigenvalues, and prints a summary: duration, maximum
+gradient, b-value at the file amplitude, b-tensor eigenvalues, and whether q
+returns to 0 at the end (refocusing). Options: `--raster-time-ms` and
+`--gradient-scale` (same defaults as the simulation config), `--fmax` for the
+spectrum range, and `--output-dir`.
 
 **Rotations** (`rotations/*.txt`): one 3x3 rotation matrix per line, flattened
 row-major into 9 space-separated values. Lines starting with `#` are comments.

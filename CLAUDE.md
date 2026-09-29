@@ -84,6 +84,13 @@ Where things run:
 - SLURM: submit from the project root. `batch/sbatch.sh <config>` for one
   config; `batch/submit_array.sh <list>.txt` for a job array (list file: one
   config path per line, `#` comments allowed).
+- Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
+  default, and already include the effect of the 180° pulse (sign flip). The
+  `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
+  new waveforms with `src/plot_waveforms.py` (g, q, spectrum, b-tensor). At
+  file amplitude the current waveforms all have b = 4500 s/mm² (components
+  1500). STEiso and STEaniso both have an isotropic b-tensor; they differ in
+  the spectral content per axis.
 - Shell scripts must keep LF line endings (enforced in `.gitattributes`).
 - `src/substrate/archive/` holds unmaintained beaded axon scripts kept for
   reference; don't update them unless asked.
@@ -146,8 +153,14 @@ Where things run:
 
 - Extend the waveform files so there is an STE waveform at every frequency,
   so V_iso can be calculated precisely (see Analysis).
-- Create a Python script to visualize waveform files (`waveforms/*.csv`,
-  N x 3), to easily check new waveforms before using them in simulations.
+- Add the M restriction tensor (related to the spectral content of the
+  waveform) to `src/plot_waveforms.py`. The user will point to the literature
+  for how to calculate it.
+- Calculate the centroid frequency of each waveform's encoding spectrum and
+  show it as a vertical line in the spectrum panel of `src/plot_waveforms.py`.
+  Confirm the definition with the user first (e.g. power-weighted mean
+  frequency of |Q(f)|^2, per axis or combined).
+- Create a separate script to compare several waveform files on the same axes.
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and
   STEaniso waveforms.
