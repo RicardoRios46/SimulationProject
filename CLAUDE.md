@@ -54,7 +54,17 @@ lock with `pixi install -a` (works on Windows) and commit `pixi.toml` and
 
 Where things run:
 - Simulations run on the Linux SLURM cluster (partitions `hx`, the default
-  with more GPUs, and `vx`).
+  with more GPUs, and `vx`). `batch/sbatch.sh`, `batch/submit_array.sh` and
+  `batch/array_sbatch.sh` (also submitted directly) were verified there on
+  2026-09-29 with small test configs on the template spheres and cylinders
+  substrates.
+- The user's Linux workstation has no SLURM but can SSH to the login node,
+  which runs from its own copy of the project. Source code reaches it only
+  through git (push `dev`, pull there); a sync script copies the git-ignored
+  folders (`outputs/`, `slurm_outputs/`, substrates, configs). Claude
+  prepares files here and gives the user commands to run on the login node.
+  After a pull that changes `pixi.lock`, run `pixi install -e disimpy-env`
+  there before submitting (see README).
 - On the user's Windows workstation (RTX 5060), disimpy-env installs but GPU
   kernels fail (numba reports an invalid device number): the pinned stack is
   too old for that GPU. Use Windows only for substrates and analysis.
@@ -130,7 +140,6 @@ Where things run:
   goal is to make it work with the new substrates. Known cause to address:
   packed objects near the domain edge extend past it and do not wrap around,
   so the substrates are not proper periodic tiles.
-- The batch scripts have not been run on the cluster since being rewritten.
 
 ### Substrates
 
