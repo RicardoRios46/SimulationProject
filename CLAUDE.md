@@ -35,7 +35,7 @@ microstructure (packed cylinders and spheres, CATERPillar axons).
 - Frequency dependence of D, K and V is compared between linear, square root
   and squared models.
 - V_iso (variance from STE powder-average fits) is **not computed yet**; it is
-  a planned analysis (see Waveforms and protocol under Open work).
+  a planned analysis (see Analysis under Open work).
 
 ## Environments (pixi)
 
@@ -138,12 +138,16 @@ Where things run:
   STE aniso). The user plans to generalize this.
 - Output filename typo `poweder_average_signal.csv` (kept for now, README
   documents it).
+- Compute V_iso from the STE powder-average fits at each frequency. Needs the
+  STE waveforms at every frequency (see Waveforms and protocol) and the fixed
+  5-waveform assumption removed.
 
 ### Waveforms and protocol
 
 - Extend the waveform files so there is an STE waveform at every frequency,
-  allowing a powder-average fit at each frequency to calculate V_iso
-  precisely.
+  so V_iso can be calculated precisely (see Analysis).
+- Create a Python script to visualize waveform files (`waveforms/*.csv`,
+  N x 3), to easily check new waveforms before using them in simulations.
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and
   STEaniso waveforms.
