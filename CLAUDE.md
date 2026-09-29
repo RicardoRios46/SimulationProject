@@ -10,7 +10,8 @@ Monte Carlo diffusion MRI simulation pipeline:
 
 1. Build substrate meshes (`src/substrate/`, `trimesh-env`)
 2. Simulate with disimpy on GPU (`src/Simulation.py`, `disimpy-env`)
-3. Analyze signals / DKI (`src/graphing.py`, `dipy-env`)
+3. Analyze signals / DKI (`src/plot_signal.py`, `src/fit_signal.py`,
+   `src/plot_trajectories.py`, sharing `src/analysis_utils.py`; `dipy-env`)
 
 Always run scripts from the project root; all paths are relative to it.
 
@@ -91,7 +92,7 @@ Where things run:
 - Simulation outputs go in a folder per config, `outputs/<config>/`, and the
   files from one run share the signal file's name: `<signal>.csv`,
   `<signal>_metadata.json`, `<signal>_traj.csv` (numeric suffix `_1`, `_2`,
-  ... added to the signal file if it exists). `graphing.py` writes to
+  ... added to the signal file if it exists). the analysis scripts write to
   `graphOutputs/<signal>/` (signal file name without `.csv`).
 - SLURM: submit from the project root. `batch/sbatch.sh <config>` for one
   config; `batch/submit_array.sh <list>.txt` for a job array (list file: one
@@ -156,10 +157,14 @@ Where things run:
   the current generators, once the periodic boundary work is done, to
   replace the old ones in the simulations.
 
-### Analysis (`src/graphing.py`)
+### Analysis (`src/fit_signal.py`)
 
-- Split `graphing.py` into scripts that can be run separately: one focused on
-  plotting the signal decay, one on the fitting.
+- `fit_signal.py` still draws the signal decay with the fits
+  (`signal_fit_<signal>.svg`, the original graphing.py plot). The user may
+  want this as a separate `plot_fit_signal.py` that combines the outputs of
+  `plot_signal.py` and `fit_signal.py` (e.g. powder-averaged signal and
+  fitted coefficients) into a plot like the original, so `fit_signal.py`
+  only fits.
 - Extend the powder-average fit to include the next order of the series:
   currently log(signal) is fit with a 2nd-order polynomial in b (giving D,
   kurtosis and variance); add the next (b^3) term.

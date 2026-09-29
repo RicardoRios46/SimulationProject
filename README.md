@@ -23,7 +23,10 @@ The project uses:
 ├── slurm_outputs/          # SLURM log files
 ├── src/
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
-│   ├── graphing.py         # Signal and DKI analysis (dipy-env)
+│   ├── plot_signal.py      # Signal decay plot (dipy-env)
+│   ├── fit_signal.py       # Signal fits (D, K, V) and DKI analysis (dipy-env)
+│   ├── plot_trajectories.py # Walker trajectory plot (dipy-env)
+│   ├── analysis_utils.py   # Shared analysis functions
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
 │   ├── compare_waveforms.py # Overlay several waveforms to compare them (dipy-env)
 │   ├── waveform_utils.py   # Shared waveform calculations
@@ -101,7 +104,8 @@ which does not include disimpy.
                                         (+ substrate_configs/<config>.toml)
 2. Write config          -             sim_configs/<config>.toml
 3. Run simulation        disimpy-env   src/Simulation.py      -> outputs/<config>/<config>.csv
-4. Analyze signals       dipy-env      src/graphing.py        -> graphOutputs/<config>/
+4. Analyze signals       dipy-env      src/plot_signal.py,    -> graphOutputs/<config>/
+                                        src/fit_signal.py
 ```
 
 ## 1. Substrates
@@ -496,31 +500,39 @@ simulation, if enabled) completes successfully.
 
 ## 4. Signal & DKI Analysis
 
-Analyze a signal file with:
+The analysis is split into three scripts that take the signal file and can
+be run separately:
 
 ```bash
-pixi run -e dipy-env python src/graphing.py outputs/<config>/<signal_file>.csv
+pixi run -e dipy-env python src/plot_signal.py outputs/<config>/<signal_file>.csv
+pixi run -e dipy-env python src/fit_signal.py outputs/<config>/<signal_file>.csv
+pixi run -e dipy-env python src/plot_trajectories.py outputs/<config>/<signal_file>.csv
 ```
 
-or with the equivalent Pixi task:
+| Script                 | Does                                                        |
+|------------------------|-------------------------------------------------------------|
+| `plot_signal.py`       | Plots the powder-averaged signal decay (no fitting)        |
+| `fit_signal.py`        | Signal fits, frequency dependence and DKI (see below)       |
+| `plot_trajectories.py` | Plots the walker trajectories (needs `<signal_file>_traj.csv` next to the signal file) |
+
+The Pixi task `fitsGraph` runs `plot_signal.py` and `fit_signal.py`:
 
 ```bash
 pixi run fitsGraph outputs/<config>/<signal_file>.csv
 ```
 
-> **Current assumption:** `graphing.py` expects exactly five waveforms, in this
+> **Current assumption:** `fit_signal.py` expects exactly five waveforms, in this
 > order: LTE 0 Hz, LTE 50 Hz, LTE 100 Hz, STE isotropic, STE anisotropic. The
 > frequency-dependence fits use the first three (0, 50, 100 Hz), and DKI is fit
 > for the LTE waveforms only.
 
-The analysis performs:
+`fit_signal.py` performs:
 
 - Powder averaging of the signal over rotations
 - 2nd order fit of log-signal decay: diffusivity, kurtosis and variance
 - Frequency-dependence fits of D, K and V (linear, square root and squared
   models). The model with the lowest least-squares error is reported as the best fit
 - DKI fit (DIPY) for FA, MD, AD and RD, and their frequency dependence
-- Walker trajectory plot, when a trajectory file is available
 
 ### Analysis Outputs
 
@@ -529,10 +541,11 @@ Results are saved in `graphOutputs/<signal_file>/`:
 | File                             | Contents                                          |
 |----------------------------------|---------------------------------------------------|
 | `poweder_average_signal.csv`     | Powder-averaged signal per waveform and b-value   |
-| `signal_<signal_file>.svg`       | Signal decay and fits                             |
+| `signal_<signal_file>.svg`       | Signal decay (`plot_signal.py`)                   |
+| `signal_fit_<signal_file>.svg`   | Signal decay with the fits                        |
 | `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | Frequency dependence of D, K, V  |
 | `MD_AD_RD.png`                   | Frequency dependence of DKI metrics               |
-| `traj_<signal_file>.png`         | Walker trajectories (if available)                |
+| `traj_<signal_file>.png`         | Walker trajectories (`plot_trajectories.py`)      |
 | `results.csv`                    | FA, MD, AD, RD, D, kurtosis and variance per waveform |
 
 ## Typical Workflow
