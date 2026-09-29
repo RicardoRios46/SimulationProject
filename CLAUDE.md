@@ -99,6 +99,26 @@ Where things run:
 - SLURM: submit from the project root. `batch/sbatch.sh <config>` for one
   config; `batch/submit_array.sh <list>.txt` for a job array (list file: one
   config path per line, `#` comments allowed).
+- Simulation settings (user's decisions, from test runs on 2026-09-29 on the
+  template substrates, 100k walkers, `uniform`, L40S GPUs):
+  - `n_t = 10000` from now on (step length 0.19 µm at D = 1 µm²/ms over the
+    58.16 ms waveforms). n_t test (`sim_configs/ntconv_*`, n_t 1000-20000):
+    at n_t 1000 (0.59 µm, close to the cylinder radii) the cylinders' D, MD
+    and RD are ~1.5-2% low; they level off by n_t 5000-10000. No trend for
+    the spheres.
+  - 10 b-values (0-4500 in steps of 500) for tests; 6 were probably enough,
+    and run time grows only weakly with the number of gradients, so they can
+    be reduced later if time matters.
+  - Run time on an L40S for 1800 gradients (5 waveforms x 40 rotations x 9
+    b-values) and 100k walkers: ~16 s + ~20 s per 1000 steps (n_t 10000:
+    ~3.6 min); 3600 gradients at n_t 1000 took 46 s vs 34 s for 1800. Setup
+    (mesh loading) ~30 s for the spheres, ~55-70 s for the cylinders. The
+    metadata `run` section records the times of each run.
+  - Monte Carlo noise at 100k walkers (different random walks across the n_t
+    runs): signal differences up to ~0.003; K and V of the nearly Gaussian
+    spheres signal (K ~0.05-0.15) scatter by ~±0.03 (20-50%), the
+    cylinders' K by ~±0.01. The spheres' V < 0 in order-3 fits appeared in
+    independent runs, so it is not only noise.
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
@@ -139,13 +159,11 @@ Where things run:
   CUDA >=12.8 (first release supporting this GPU generation), plus updating
   disimpy for numpy>=2. Any change must keep working on the cluster, so test
   there too. Start from the kernel failure described under Environments.
-- Time step convergence: with `n_t = 1000` over the 58.16 ms waveforms, the
-  step length is ~0.59 µm (D = 1 µm²/ms), comparable to the cylinder radii
-  (0.2-3 µm, mean 0.6); old production runs used `n_t = 10000` (0.19 µm).
-  Before production, run the same config at n_t = 1000/5000/10000 and check
-  where the signal and D, K, V stop changing, and record the job run time
-  for each (cost scales roughly with walkers x steps x gradients), to choose
-  n_t for production.
+- Monte Carlo noise: runs with different random walks scatter much more
+  than expected (see Simulation settings). A seed test (same config, several
+  seeds, `sim_configs/seedtest_*`) is prepared to measure the run-to-run
+  scatter of D, K, V; it scales as 1/sqrt(walkers), which gives the walkers
+  needed for a target precision on V_iso.
 - Periodic boundaries: `periodic = true` has had issues in the past, and the
   goal is to make it work with the new substrates. Known cause to address:
   packed objects near the domain edge extend past it and do not wrap around,
@@ -187,7 +205,7 @@ Where things run:
 - `fit_powder_average.py --order 3` adds the b^3 term (k3 = -6E, skewness
   k3/V^1.5); `--fix-intercept` sets C = 0. Pilot runs (2026-09-29,
   `sim_configs/pilot_*.toml`: 19 b-values 0-4500, 100k walkers, `uniform`,
-  n_t 1000, template substrates) showed it is not Monte Carlo noise: for the
+  n_t 1000, template substrates) showed it is not only Monte Carlo noise: for the
   cylinders order 3 is stable, for the spheres V is ~0 or negative at
   50/100 Hz and STEiso (signal nearly Gaussian, K ~0.05, mostly
   extra-cellular). Order-2 K rises with the maximum b fitted (truncation
@@ -195,8 +213,10 @@ Where things run:
   a `--b-max` option for the fit (fit_cumulant already has b_max; the user
   will decide on it when the intra/extra runs start), weighting the log fit
   (high-b points are noisier), intra/extra positions, denser spheres (see
-  Substrates). Since Monte Carlo noise is small, future test runs can use
-  10 b-values instead of 19 (user's decision).
+  Substrates). Note: identical reruns with the same seed only show that the
+  simulation is deterministic, not that the noise is small; the n_t test
+  showed the noise is large for the nearly Gaussian spheres signal (see
+  Simulation settings).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the
   STE waveforms at every frequency (see Waveforms and protocol).
 
