@@ -209,8 +209,8 @@ for filecount, file in enumerate(waveforms):
     #Load gradient waveform
     x_grad, y_grad, z_grad = read_shape(f"waveforms/{file}")
 
-    time = len(x_grad)*raster_time
-    time_points = np.arange(0,time,raster_time)
+    duration = len(x_grad)*raster_time
+    time_points = np.arange(0,duration,raster_time)
 
     #Create gradient array
     gradient = np.zeros([1,len(time_points),3])
