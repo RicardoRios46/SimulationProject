@@ -16,12 +16,18 @@ compare encoding power).
 A summary table (duration, b-value, b-tensor eigenvalues, refocusing,
 centroid frequencies) is printed and saved as a CSV next to the figure.
 
+With --sum-check, the first file is the reference and the others are its
+components (e.g. an STE and its LTE component files): the sum of the
+components' gradients is drawn as a dashed black line over the reference, and
+the maximum difference per axis is printed. All files must have the same
+number of rows.
+
 Usage (from the project root):
     pixi run -e dipy-env python src/compare_waveforms.py waveforms/<file1>.csv waveforms/<file2>.csv [...]
 
 Example:
     python src/compare_waveforms.py waveforms/STEiso.csv waveforms/STEiso_LTE1.csv \
-        waveforms/STEiso_LTE2.csv waveforms/STEiso_LTE3.csv --name STEiso_components
+        waveforms/STEiso_LTE2.csv waveforms/STEiso_LTE3.csv --name STEiso_components --sum-check
 """
 
 import argparse
@@ -40,6 +46,8 @@ parser.add_argument("--name", help="Output name (default: compare_<first file>)"
 parser.add_argument("--shared-scale", action="store_true",
                     help="Normalize all spectra by the same maximum, to also compare encoding power "
                          "(default: each curve normalized to its own maximum)")
+parser.add_argument("--sum-check", action="store_true",
+                    help="Check that the first file equals the sum of the other files (its components)")
 parser.add_argument("--raster-time-ms", type=float, default=0.02,
                     help="Time between rows in ms (default 0.02, as in the simulation config)")
 parser.add_argument("--gradient-scale", type=float, default=1e-3,
@@ -54,6 +62,17 @@ waveforms = [analyze_waveform(f, args.raster_time_ms, args.gradient_scale) for f
 labels = args.labels or [w["name"] for w in waveforms]
 if len(labels) != len(waveforms):
     raise SystemExit(f"Error: got {len(labels)} labels for {len(waveforms)} files")
+
+# Sum check: the first file is the reference, the others its components
+if args.sum_check:
+    if len(waveforms) < 2:
+        raise SystemExit("Error: --sum-check needs a reference file and at least one component file")
+    lengths = {len(w["data"]) for w in waveforms}
+    if len(lengths) > 1:
+        raise SystemExit(f"Error: --sum-check needs files with the same number of rows, got {sorted(lengths)}")
+    component_sum = sum(w["data"] for w in waveforms[1:])      # file units
+    sum_difference = np.abs(waveforms[0]["data"] - component_sum).max(axis=0)
+    reference_max = np.abs(waveforms[0]["data"]).max(axis=0)
 
 name = args.name or f"compare_{waveforms[0]['name']}"
 os.makedirs(args.output_dir, exist_ok=True)
@@ -90,6 +109,12 @@ for n, (w, label) in enumerate(zip(waveforms, labels)):
                             label=f"{label} centroid: {w['centroids'][i]:.1f} Hz")
 
     legend_handles.append((line, label))
+
+if args.sum_check:
+    for row, i in enumerate(active_axes):
+        line, = axs[row, 0].plot(waveforms[0]["t"], component_sum[:, i] * args.gradient_scale * 1e3,
+                                 color="black", linestyle="--", linewidth=1)
+    legend_handles.append((line, "sum of components"))
 
 for row, i in enumerate(active_axes):
     axs[row, 0].set_ylabel(f"{AXES[i]}\ng (mT/m)")
@@ -136,4 +161,10 @@ table = pd.DataFrame(rows)
 table.to_csv(f"{output}.csv", index=False)
 
 print(table.to_string(index=False, na_rep="-", float_format=lambda v: f"{v:.4g}"))
+if args.sum_check:
+    print(f"\nSum check: {labels[0]} vs sum of {', '.join(labels[1:])}")
+    for axis, diff, ref in zip(AXES, sum_difference, reference_max):
+        relative = f" ({diff / ref:.2e} of max |{axis}|)" if ref > 0 else ""
+        print(f"  {axis}: max |difference| = {diff:.3g} (file units){relative}")
+
 print(f"\nSaved {output}.png and {output}.csv")

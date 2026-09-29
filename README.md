@@ -340,7 +340,7 @@ LTE component files, overlay them with:
 ```bash
 pixi run -e dipy-env python src/compare_waveforms.py waveforms/STEiso.csv \
     waveforms/STEiso_LTE1.csv waveforms/STEiso_LTE2.csv waveforms/STEiso_LTE3.csv \
-    --name STEiso_components
+    --name STEiso_components --sum-check
 ```
 
 This saves `graphOutputs/waveforms/<name>.png` with one row per axis (only the
@@ -355,6 +355,7 @@ frequencies) is printed and saved as `<name>.csv`.
 | `--name`         | Output name (default `compare_<first file>`)                       |
 | `--labels`       | Legend labels, one per file (default: file names)                  |
 | `--shared-scale` | Normalize all spectra by one maximum to also compare encoding power (default: each curve normalized to its own maximum, to compare frequency content) |
+| `--sum-check`    | Treat the first file as the reference and the others as its components (e.g. an STE and its LTE component files): draw the sum of the components' gradients as a dashed black line and print the maximum difference per axis. All files must have the same number of rows |
 
 `--raster-time-ms`, `--gradient-scale`, `--fmax` and `--output-dir` work as in
 `plot_waveforms.py`. Both scripts share their calculations in

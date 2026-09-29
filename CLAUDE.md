@@ -88,7 +88,9 @@ Where things run:
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
   new waveforms with `src/plot_waveforms.py` (g, q, spectrum, centroid
-  frequencies, b-tensor) and compare several with `src/compare_waveforms.py`;
+  frequencies, b-tensor) and compare several with `src/compare_waveforms.py`
+  (`--sum-check` verifies an STE equals the sum of its LTE components; true
+  for the current STEiso and STEaniso files);
   both use the calculations in `src/waveform_utils.py`. At file amplitude the current waveforms all have
   b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
   b-tensor; they differ in the spectral content per axis. Centroid frequencies
@@ -163,9 +165,6 @@ Where things run:
   encoding spectrum and the centroid frequencies. The user is checking with a
   collaborator whether the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 is
   the usual choice; it may need to change (it gives higher centroids).
-- Add a `--sum-check` option to `src/compare_waveforms.py`: treat the first
-  file as the reference and the rest as its components, overlay the sum of the
-  components and print the maximum difference per axis.
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and
   STEaniso waveforms.
