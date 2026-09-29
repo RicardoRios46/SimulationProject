@@ -138,6 +138,12 @@ Where things run:
   file has them equal).
 - Substrates generated before the generator refactor use old names
   (e.g. `sphereRadius_0.5`) and old sphere radius sampling (clipped gamma).
+- Try to reproduce the old `2910_cylinders_gamma_shape0.75_scale0.55_spread0.35`
+  substrate (used by the existing `2910_cylinders_...` sim configs and
+  outputs) with `cylinders.py`: same gamma shape/scale, `min_gap = 0.35`
+  instead of the template's 0.45. The user thinks it used the same seed as
+  the spheres (123); `n_objects`, `domain_size` and the radius limits are
+  unknown.
 
 ### Analysis (`src/graphing.py`)
 
