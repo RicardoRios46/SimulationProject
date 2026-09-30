@@ -269,6 +269,17 @@ Where things run:
   one refocusing pulse needs gradient reversals within each half (moves the
   spectrum away from 0 Hz). The user will discuss the 0 Hz design with a
   collaborator.
+  Also tried (2026-09-30, not saved): the same LTE waveform on x, y and z at
+  the same time ("xyz - pulse - xyz") is just an LTE along (1,1,1), so the
+  b-tensor is linear (1, 0, 0) at every frequency, also with sign flips. The
+  LTE0/50/100 waveforms on x/y/z at the same time (each scaled to equal b)
+  are not isotropic either (0.45, 0.33, 0.22) and do not match STEaniso,
+  which uses its own timings. An STE needs q_x, q_y, q_z of equal size with
+  zero overlaps (integral of q_i q_j = 0 for i != j): either at different
+  times, each returning to 0 first (sequential TDE), or at the same time with
+  different shapes (STEiso, STEaniso). All three axes near 0 Hz may not be
+  possible with one refocusing pulse; STEaniso's x axis reaches 8.4 Hz
+  because y and z are at higher frequencies.
 - Add the M restriction tensor (related to the spectral content of the
   waveform) to `src/plot_waveforms.py` (and the shared `src/waveform_utils.py`).
   The user will point to the literature for how to calculate it.
