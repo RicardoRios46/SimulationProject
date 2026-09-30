@@ -10,7 +10,7 @@
 #   substrate/<name>/<name>_faces.csv
 # This is the periodic tile made by src/substrate/spheres.py from
 # substrate_configs/spheres_template.toml; cylinders_template.toml gives
-# "cylinders_2395_gamma_shape5p44_scale0p0643_gap0p1_periodic".
+# "cylinders_1198_gamma_shape4_scale0p12_gap0p1_periodic".
 name = "spheres_479_gamma_shape5p76_scale1p04_gap1_periodic"
 
 # Whether the substrate mesh is treated as periodic. true only for substrates

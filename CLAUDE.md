@@ -202,9 +202,9 @@ Where things run:
   - `spheres.py` (template: 150 µm tile, 480 spheres, gamma 5.76/1.04 µm,
     radii 2-12 µm, gap 1 µm, periodic): 479 placed, volume_fraction 0.1802,
     radius_mean 5.981
-  - `cylinders.py` (template: 60 µm tile, 2400 cylinders, gamma 5.44/0.0643
-    µm, radii 0.1-1.5 µm, gap 0.1 µm, periodic): 2395 placed, area_fraction
-    0.3006, radius_mean 0.3511
+  - `cylinders.py` (template: 60 µm tile, 1200 cylinders, gamma 4/0.12 µm,
+    radii 0.15-1.5 µm, gap 0.1 µm, periodic): 1198 placed, area_fraction
+    0.2971, radius_mean 0.4861
   - `caterpillar.py` (single_axon_run3.csv): 1 cell, 55 spheres, 1 volume
 
 ## Open work and known issues
@@ -293,11 +293,20 @@ Where things run:
   towards mouse values and the axon radii to a smaller mean. Chosen
   (templates since 2026-09-30): spheres mean r ~6 µm, SD ~2.2 (gamma 5.76 /
   1.04 µm, 2-12 µm), 480 in a 150 µm tile -> volume fraction 0.18;
-  cylinders mean r ~0.35 µm, SD ~0.14 (gamma 5.44 / 0.0643 µm, 0.1-1.5 µm,
-  diameter ~0.7 µm), 2400 in a 60 µm tile with gap 0.1 µm -> area fraction
-  0.30 (kept in the plausible intra-axonal range; revisit with myelin). A
-  gap of 0.45 µm (the old value, larger than the new mean radius) reached
-  only 0.22 and skipped large axons. Template values before this: spheres gamma shape 2, scale 1.5 µm
+  cylinders: inner radius gamma alpha 4, beta 0.12 µm (mean ~0.49 µm,
+  SD ~0.22, diameter ~1 µm), radii 0.15-1.5 µm, 1200 in a 60 µm tile with
+  gap 0.1 µm -> area fraction 0.30 (kept in the plausible intra-axonal
+  range; revisit with myelin). Why these values (user's decision, to back
+  it in the paper): they are the values the CATERPillar authors validated
+  against the mouse corpus callosum 3D EM of Lee et al. 2019 (8-week
+  C57BL/6 female, genu; inner diameter 1.03 +- 0.41 µm, g-ratio ~0.6; see
+  the CATERPillar notes below); radius_min 0.15 µm is CATERPillar's
+  MinRadius. The same values are used for our cylinders and for the
+  CATERPillar configs. (A first choice, gamma 5.44/0.0643, mean r 0.35 µm
+  from the older 2D EM studies, was replaced before use; the n_t
+  convergence test ntconv2 was run on that substrate, whose axons are
+  thinner, so it is a conservative check.) A gap of 0.45 µm (the old value)
+  reached only 0.22 with thin axons and skipped large ones. Template values before this: spheres gamma shape 2, scale 1.5 µm
   (mean r ~3.3 µm); cylinders shape 0.75, scale 0.55 µm (mean r ~0.59 µm).
   Packing scan for the record (placement only, 100 µm periodic tile,
   spheres template radii, 4000 drawn): in drawn order 0.31 (gap 1),
@@ -310,11 +319,55 @@ Where things run:
   between an inner (axon) and outer (fibre) radius, g-ratio ~0.6-0.7, with
   both radii in the objects file. Revisit the intra-axonal area fraction
   (0.30 now) then.
-- CATERPillar (when starting the CATERPillar simulations): look at
-  https://github.com/Mic-map/CATERPillar and draft a config.json matching
-  the literature values above (see its example_config.json). It can
-  generate axons, myelin, glial cells and soma bodies, for a more realistic
-  substrate than the packed spheres/cylinders.
+- CATERPillar (https://github.com/Mic-map/CATERPillar; paper bioRxiv
+  2025.06.20.660694). Findings from its code and paper (2026-09-30):
+  - Config (JSON, run as `./CATERPillar --config <file>.json`): `Alpha`,
+    `Beta` are a gamma of the INNER axon radius (µm; the code adds pi r^2 to
+    the ICVF and compares with `MinRadius`); myelinated outer radius =
+    inner + thickness, thickness = K1 + K2 D + K3 ln D (D inner diameter;
+    K1-K3 = 0.35, 0.006, 0.024 from Lee et al., mouse). The paper matched
+    mouse corpus callosum (Lee et al. 2019) with alpha 4, beta 0.12 (used
+    for our cylinders too), epsilon 0.4, beading 0.3; alpha 4, beta 0.25 is
+    advised for unmyelinated axons (~outer radius). `AxonsICVF` /
+    `AxonsWithMyelinICVF` in % (myelinated incl. myelin; up to ~70% total,
+    e.g. 150 µm voxel < 12 h with 20 threads, ~300 MB each). `FODF_c2` =
+    <cos^2> of axon angle to z (1 aligned, 1/3 isotropic);
+    `NumberOfPopulations` 1-3 perpendicular bundles. Glia = two populations
+    of soma + processes modelled on astrocytes (protoplasmic in GM, fibrous
+    in WM); soma radius normal (mean/std); no neurons or oligodendrocytes.
+    Axons are placed largest first. Bug in example_config.json: the key
+    `OndulationFactor` is ignored (the code reads `UndulationFactor`,
+    default 5).
+  - Output `<Filename>.csv` (cell_type cell_id component component_id X Y
+    Z inner_radius outer_radius, µm) and `_growth_info.txt`. Not periodic:
+    the authors extended MC/DC with mirror boundaries and started walkers
+    in a central region 30 µm from the edges.
+  - Fractions (open, user's decision): Lee et al. give none (they
+    segmented only myelinated axons, 36 x 48 x 20 µm, genu). Reports of
+    the myelinated share of mouse corpus callosum axons differ (e.g. ~90%
+    of fibres in a recent EM study vs ~30% by count in older studies);
+    check before fixing AxonsWithMyelinICVF / AxonsICVF.
+  - Plan: two configs for ex-vivo mouse, WM (corpus callosum: alpha 4,
+    beta 0.12, MinRadius 0.15, K1-K3 of Lee, FODF_c2 ~0.9 for the ~18 deg
+    dispersion of Lee, epsilon 0.4, beading 0.3, ~60% total ICVF, small
+    fibrous-astrocyte fraction) and GM (approximation accepted by the user:
+    ~25-30% dispersed unmyelinated axons, glia pop 1 as neuron somas
+    r ~6.4 +- 1.5 µm ~10% + processes as dendrites ~20%, pop 2 as
+    protoplasmic astrocytes r ~4 µm). Folder layout for the configs,
+    runs and conversions: see the proposal to be agreed (below).
+  - Converter work (`caterpillar.py` + `Simulation.py`), to do: (1) myelin
+    with both surfaces (inner and outer), no walkers in the myelin; (2) an
+    objects file (sphere centres, inner/outer radii per cell) for the
+    intra/extra sampling; (3) an option to start walkers only in a central
+    region (edge buffer), since the substrates are not periodic and
+    disimpy has walls or periodic boundaries only; (4) check the mesh size
+    and boolean-union time for thousands of axons (start with a 50 µm voxel).
+- MC/DC simulator (used by the CATERPillar authors, with their mirror
+  boundary extension): the user may be able to compile it with those
+  changes, but the decision is to keep disimpy, which already works here.
+- Gray matter substrate generators: the user has seen other simulators
+  aimed at gray matter; look for them later (CATERPillar is WM-focused and
+  its GM use here is an approximation).
 
 ### Analysis (`src/fit_powder_average.py`, `src/fit_tensor.py`)
 
