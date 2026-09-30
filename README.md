@@ -304,7 +304,7 @@ metadata JSON.
 
 | Key               | Description                                                                 |
 |-------------------|-----------------------------------------------------------------------------|
-| `waveform_file`   | List of waveform files in `waveforms/`                                      |
+| `waveform_file`   | List of waveform files in `waveforms/`. All must have the same duration (number of rows): they are simulated with one time step, and a config that mixes durations stops with an error. Run e.g. the 139.2 ms TDE waveforms in their own configs |
 | `rotation_file`   | Rotation file in `rotations/`. Either a single file applied to all waveforms, or a list with exactly one file per waveform (in the same order) |
 | `b_targets`       | Target b-values in s/mm². Each waveform/rotation is scaled to each b-value. `0` is not simulated and is written with `signal = 1.0` |
 | `raster_time_ms`  | *Optional.* Time step of the waveform files in ms. Default `0.02` (20 µs)   |

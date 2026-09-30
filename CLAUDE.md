@@ -168,6 +168,9 @@ Where things run:
   CUDA >=12.8 (first release supporting this GPU generation), plus updating
   disimpy for numpy>=2. Any change must keep working on the cluster, so test
   there too. Start from the kernel failure described under Environments.
+  Also on Windows: without a `seed` in the config, `Simulation.py` fails at
+  `np.random.randint(0, 2**32-1)` (`high is out of bounds for int32`: numpy<2
+  uses 32-bit integers there); fine on Linux.
 - Weighted cumulant fit: the signal noise is about constant in b, so the
   noise of log S grows as 1/S and an unweighted log fit gives the noisy
   high-b points too much weight. Consider weights ~S^2 in `fit_cumulant`

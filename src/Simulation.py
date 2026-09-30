@@ -174,6 +174,19 @@ def read_shape(filename):
 
     return x_grad, y_grad, z_grad
 
+#All waveforms of a config must have the same duration: each one is interpolated
+#to n_t steps over its own duration, but the simulation runs with a single time
+#step dt, so waveforms with other durations would be simulated on the wrong time
+#scale. Checked before loading the substrate, so the run fails right away.
+waveform_rows = {file: len(read_shape(f"waveforms/{file}")[0]) for file in waveforms}
+if len(set(waveform_rows.values())) > 1:
+    raise ValueError(
+        "All waveforms in a config must have the same duration (they are simulated "
+        "with one time step). Got: "
+        + ", ".join(f"{file} {rows * raster_time:.2f} ms" for file, rows in waveform_rows.items())
+        + ". Run waveforms with different durations in separate configs."
+    )
+
 #Load substrate
 substrate = get_substrate(meshName)
 
