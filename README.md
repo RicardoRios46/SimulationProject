@@ -29,6 +29,7 @@ The project uses:
 │   ├── analysis_utils.py   # Shared analysis functions
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
 │   ├── compare_waveforms.py # Overlay several waveforms to compare them (dipy-env)
+│   ├── make_tde_waveforms.py # Build TDE waveforms from the LTE waveforms (dipy-env)
 │   ├── waveform_utils.py   # Shared waveform calculations
 │   └── substrate/          # Substrate generation scripts (trimesh-env)
 │       └── archive/        # Unmaintained beaded axon scripts, kept for reference
@@ -368,9 +369,33 @@ frequencies) is printed and saved as `<name>.csv`.
 
 `--raster-time-ms`, `--gradient-scale`, `--fmax` and `--output-dir` work as in
 `plot_waveforms.py`. Both scripts share their calculations in
-`src/waveform_utils.py`. Options: `--raster-time-ms` and
-`--gradient-scale` (same defaults as the simulation config), `--fmax` for the
-spectrum range, and `--output-dir`.
+`src/waveform_utils.py`.
+
+**Triple diffusion encoding (TDE) waveforms**: spherical tensor encoding at
+the frequencies of the LTE waveforms, built from them with:
+
+```bash
+pixi run -e dipy-env python src/make_tde_waveforms.py [--frequencies 0 50 100]
+```
+
+For each frequency f it concatenates the blocks of `waveforms/LTE<f>hz.csv` on
+the three axes: x, y and z first halves, the gap for the refocusing pulse,
+then the x, y and z second halves, with the same lead and tail zeros, and
+writes `waveforms/TDE<f>hz.csv` (each axis is the LTE waveform, shifted, so no
+component files are written). The b-tensor is isotropic
+only if each half of the LTE waveform returns q to 0 on its own, which the
+script checks. This holds for 50 and 100 Hz but not for the 0 Hz PGSE
+waveform: its q stays on while the other axes play, so the axes overlap in q
+and the b-tensor is not isotropic (eigenvalues/b 0.78, 0.19, 0.03). It is
+still written, with a warning, as `TDE0hz_broken.csv`, to show the problem;
+do not use it as an STE.
+
+The TDE waveforms last 139.2 ms (6960 rows) instead of 58.16 ms. Per axis
+they have the same b-value and nearly the same centroid frequency as the LTE
+waveform (TDE50hz 47.6 Hz vs 47.3 Hz, TDE100hz 98.6 Hz vs 98.5 Hz), but the
+two blocks of each axis are further apart, which adds finer structure to the
+spectrum. Because of the longer duration, run them in their own simulation
+configs with a larger `n_t` (see the simulation configuration).
 
 **Rotations** (`rotations/*.txt`): one 3x3 rotation matrix per line, flattened
 row-major into 9 space-separated values. Lines starting with `#` are comments.

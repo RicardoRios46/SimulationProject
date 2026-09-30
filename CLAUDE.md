@@ -136,7 +136,10 @@ Where things run:
   b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
   b-tensor; they differ in the spectral content per axis. Centroid frequencies
   (dephasing spectrum): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
-  axes; STEaniso x/y/z 8.4/47.9/98.8 Hz (combined 51.3 Hz).
+  axes; STEaniso x/y/z 8.4/47.9/98.8 Hz (combined 51.3 Hz). TDE50hz and
+  TDE100hz: 139.2 ms (6960 rows), isotropic b-tensor, b 4500 per axis (13500
+  total at file amplitude), centroids 47.6 and 98.6 Hz on every axis; they
+  must be simulated in their own configs (longer duration).
 - Shell scripts must keep LF line endings (enforced in `.gitattributes`).
 - `src/substrate/archive/` holds unmaintained beaded axon scripts kept for
   reference; don't update them unless asked.
@@ -238,8 +241,19 @@ Where things run:
 
 ### Waveforms and protocol
 
-- Extend the waveform files so there is an STE waveform at every frequency,
-  so V_iso can be calculated precisely (see Analysis).
+- STE at every LTE frequency: TDE (triple diffusion encoding) waveforms
+  `TDE50hz`, `TDE100hz` built by `src/make_tde_waveforms.py` from the LTE
+  files (x, y, z first halves, gap, x, y, z second halves; 139.2 ms). TODO
+  0 Hz: the PGSE half does not return q to 0, so the axes overlap in q and the
+  b-tensor is not isotropic (eigenvalues/b 0.78, 0.19, 0.03 for x-y-z; no
+  order of the second halves or axis signs fixes it; z-y-x is worse, 0.89,
+  0.09, 0.03). `make_tde_waveforms.py` still writes it, with a warning, as
+  `TDE0hz_broken.csv` so the user can show the problem (see
+  `graphOutputs/waveforms/TDE0hz_broken.png`: overlapping q plateaus). Each
+  axis must be refocused before the next starts, which with
+  one refocusing pulse needs gradient reversals within each half (moves the
+  spectrum away from 0 Hz). The user will discuss the 0 Hz design with a
+  collaborator.
 - Add the M restriction tensor (related to the spectral content of the
   waveform) to `src/plot_waveforms.py` (and the shared `src/waveform_utils.py`).
   The user will point to the literature for how to calculate it.
