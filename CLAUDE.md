@@ -57,7 +57,7 @@ lock with `pixi install -a` (works on Windows) and commit `pixi.toml` and
 
 Where things run:
 - Simulations run on the Linux SLURM cluster (partitions `hx`, the default
-  with more GPUs, and `vx`). `batch/sbatch.sh`, `batch/submit_array.sh` and
+  with more GPUs: 7 nodes with 2 GPUs (L40S) and 500 GB RAM each, and `vx`). `batch/sbatch.sh`, `batch/submit_array.sh` and
   `batch/array_sbatch.sh` (also submitted directly) were verified there on
   2026-09-29 with small test configs on the template spheres and cylinders
   substrates.
@@ -263,15 +263,16 @@ Where things run:
   not used. The user decided to wait: `intra` runs took much longer (disimpy
   computed the initial positions inside the objects; now `Simulation.py`
   samples them from the objects file in < 1 s, see Periodic boundaries), and
-  may need more resources, so check them first (`seff <jobid>`, reportseff, or
+  may need more resources, so check them first (`reportseff <jobid>`, or
   `sacct -j <jobid> --format=JobID,MaxRSS,TotalCPU,Elapsed`). Memory also
   grows with walkers, gradients and n_t. Host memory peak at the end of a
   run: disimpy copies all phases (gradients x walkers, float64) to the CPU
   and computes exp(1j * phases) over the whole array, so the peak is ~5x
   the phase array: 1800 gradients x 1M walkers ~72 GB, 1080 x 1M ~43 GB.
   The V_iso run (2026-09-30, `sim_configs/viso_*`, 1M walkers) was
-  submitted with --mem=96G; check its real use (seff) before choosing
-  defaults. If nodes cannot give that much, Simulation.py could run the
+  submitted with --mem=128G; check its real use before choosing defaults.
+  The cluster has no `seff`; use `reportseff <jobid>` (Python wrapper; its
+  MemEff column x the requested memory gives the peak), as for job 209524. If nodes cannot give that much, Simulation.py could run the
   walkers in chunks (e.g. 4 x 250k with different seeds) and sum the
   signals.
 - Periodic CATERPillar substrates: `caterpillar.py` has no `periodic`
