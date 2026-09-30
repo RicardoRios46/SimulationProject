@@ -111,7 +111,9 @@ Where things run:
     be reduced later if time matters.
   - Run time on an L40S for 1800 gradients (5 waveforms x 40 rotations x 9
     b-values) and 100k walkers: ~16 s + ~20 s per 1000 steps (n_t 10000:
-    ~3.6 min); 3600 gradients at n_t 1000 took 46 s vs 34 s for 1800. Setup
+    ~3.6 min); 3600 gradients at n_t 1000 took 46 s vs 34 s for 1800, and
+    the TDE test (1080 gradients, n_t 24000) ~19 s per 1000 steps: the run
+    time depends mostly on steps x walkers, little on the gradients. Setup
     (mesh loading) ~30 s for the spheres, ~55-70 s for the cylinders. The
     metadata `run` section records the times of each run.
   - Monte Carlo noise, from the seed test (`sim_configs/seedtest_*`, 5 seeds
@@ -125,6 +127,17 @@ Where things run:
     (~36-72 min at n_t 10000, 1800 gradients). V_iso, a difference of
     variances, needs more. The spheres' V < 0 in order-3 fits appeared in
     independent runs, so it is not only noise.
+  - TDE test (2026-09-30, job 210439, `sim_configs/tde_*.toml` from
+    `config_template_tde.toml`: TDE0hz/50hz/100hz, n_t 24000, 100k walkers,
+    seed 123, template substrates): ran fine after fixing the time point count
+    in `Simulation.py` (6961 points for 6960 rows); 464 s (spheres) and
+    427 s (cylinders) of simulation. `fit_powder_average.py` classifies the
+    three TDEs as STE (8.6, 47.6, 98.6 Hz) and fits the STE frequency
+    models; `fit_tensor.py` has nothing to fit (no LTE). TDE50hz matched
+    STEiso within the seed-test SD (spheres V 0.0448 vs 0.0446 +- 0.0035,
+    cylinders 0.0556 vs 0.0555 +- 0.0010). Spheres: STE ~ LTE at 50/100 Hz
+    (no microscopic anisotropy); TDE0hz V 0.1135 vs LTE0hz 0.1212 +- 0.0015.
+    Cylinders: STE V ~0.054 at every frequency vs LTE ~0.11.
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
@@ -166,18 +179,12 @@ Where things run:
 
 ### Simulation and environment
 
-- NEXT ON THE CLUSTER MACHINE: test the TDE simulations (TDE waveforms and
-  `config_template_tde.toml` were made on 2026-09-29 on the Windows machine,
-  not yet run). On the login node: `git pull` on `dev`, `pixi install -e
-  disimpy-env`, create TDE configs from `sim_configs/config_template_tde.toml`
-  (set the substrate and rotation file; `n_t = 24000` keeps the 5.8 µs time
-  step of n_t 10000 at 58.16 ms), and submit a small test (e.g. the template
-  spheres and cylinders, 100k walkers). Check: the run completes, the run
-  times in the metadata (~2.4x those at n_t 10000), and the analysis
-  (`fit_powder_average.py` should classify TDE0hz/TDE50hz/TDE100hz as STE
-  with centroids ~8.6, ~47.6 and ~98.6 Hz, which gives the STE panel its
-  first frequency-model fits). A config mixing TDE with 58.16 ms waveforms
-  now stops with an error, by design.
+- TDE vs STE and LTE: in the first TDE test (see Simulation settings)
+  TDE50hz matched STEiso within the noise (same 47.6 Hz centroid, 139.2 vs
+  58.16 ms), so the diffusion time difference did not show in D, K, V; one
+  seed only, check with more seeds before relying on it. A combined analysis
+  of several runs (LTE and TDE per frequency, e.g. V_LTE - V_STE towards
+  V_iso) is not written yet: each run is analysed separately.
 
 - Update `disimpy-env` so simulations can also run on the local Windows
   workstation (RTX 5060, compute capability 12.0). Likely needs a newer
