@@ -269,12 +269,45 @@ Where things run:
   the current generators, to replace the old ones in the simulations. The
   periodic boundary work is done for spheres and cylinders (see Periodic
   substrates under Conventions); CATERPillar still needs it.
-- Denser sphere packing: the template spheres substrate has a volume fraction
-  of only 0.17, so most of the signal (with `uniform` walkers) comes from the
-  extra-cellular space. The user attributes the unstable order-3 fits of the
-  spheres to this (see Analysis). A sphere substrate with more packing
-  (e.g. more `n_objects`, smaller `min_gap`) may be needed to reduce the
-  extra-cellular space; this matters when measuring the intra-cellular signal.
+- Realistic substrates for ex-vivo mouse brain (literature check and user's
+  decisions, 2026-09-30). The simulations accompany a paper with ex-vivo
+  mouse data: approach that setting, but it need not be matched exactly.
+  Literature: ECS 15-25% in cryo-fixed (near in vivo) mouse neocortex vs
+  < 5% after aldehyde fixation (Korogod et al. 2015 eLife); mouse cortex
+  ~9.2e4 neurons/mm^3, pyramidal soma volume ~1100 µm^3 (r ~6.4 µm), so
+  neuronal somata fill only ~10% of cortex; the rest is mostly neuropil
+  (axons 31-36%, dendrites 23-35%), not free water. SANDI (Palombo et al.)
+  uses soma radii 2-10 µm (microglia to large neurons), neurites <= 1.5 µm;
+  ex-vivo mouse cortex fits r ~6-10 µm. Mouse corpus callosum inner axon
+  diameters 0.47-0.88 µm (older EM studies) to 1.03 +- 0.41 µm (3D EM,
+  Lee et al.), g-ratio ~0.6; gamma is the usual fit but GEV/log-normal fit
+  better (Sepehrband et al. 2016). Rigid spheres cannot pack above ~0.64-0.7
+  (random close packing); dense axon generators (CACTUS, up to 95%) use
+  growth/optimisation, not random sequential placement.
+  Decisions: the spheres represent soma in gray matter, so a realistic soma
+  volume fraction is ~10-20%, which the current placement reaches without
+  distorting the radii; no denser sphere packing is needed. With a
+  spheres-only substrate the meaningful simulation is `intra` (soma);
+  `extra`/`uniform` are dominated by nearly free extra-cellular water,
+  whereas in tissue that space is mostly neuropil. Move the soma radii
+  towards mouse values and the axon radii to a smaller mean (values to be
+  set). Template values before this: spheres gamma shape 2, scale 1.5 µm
+  (mean r ~3.3 µm); cylinders shape 0.75, scale 0.55 µm (mean r ~0.59 µm).
+  Packing scan for the record (placement only, 100 µm periodic tile,
+  spheres template radii, 4000 drawn): in drawn order 0.31 (gap 1),
+  0.37 (0.5), 0.40 (0.2), with the placed mean radius falling to ~2.4-2.6 µm
+  (large spheres skipped); largest first 0.54 (gap 1), 0.64 (0.2), 0.675
+  (0.2, 20000 attempts, 750 s), but bimodal: nearly all 8-12 µm and < 2 µm
+  spheres placed, only 20-30% of 3-8 µm.
+- Myelin (future): the cylinders have no myelin (all space outside is free
+  water). Later, myelinated axons could be modelled as an excluded ring
+  between an inner (axon) and outer (fibre) radius, g-ratio ~0.6-0.7, with
+  both radii in the objects file.
+- CATERPillar (when starting the CATERPillar simulations): look at
+  https://github.com/Mic-map/CATERPillar and draft a config.json matching
+  the literature values above (see its example_config.json). It can
+  generate axons, myelin, glial cells and soma bodies, for a more realistic
+  substrate than the packed spheres/cylinders.
 
 ### Analysis (`src/fit_powder_average.py`, `src/fit_tensor.py`)
 
