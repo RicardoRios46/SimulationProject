@@ -19,6 +19,7 @@ Conventions used by all generators:
     radius_fixed              Radius used when radius_distribution = "fixed" (µm)
     max_attempts              Random positions tried per object before skipping it
     max_consecutive_failures  Stop placing after this many objects in a row fail
+    periodic                  Build a periodic tile (optional, default false, see tile_periodic())
 
 Outputs of save_substrate(), in substrate/<name>/:
     <name>_vertices.csv, <name>_faces.csv   Mesh in meters (simulation input)
@@ -26,6 +27,8 @@ Outputs of save_substrate(), in substrate/<name>/:
     <name>_radii.png                        Radius histogram (if radii are given)
     <name>_cross_section.png                2D cross-section (cylinders only)
     <name>_params.json                      Input parameters, achieved results and provenance
+    <name>_objects.csv                      Object centers and radii in meters, in the frame
+                                            of the mesh CSVs (if objects are given)
 """
 
 import os
@@ -36,9 +39,13 @@ import tomllib
 import subprocess
 from datetime import datetime
 
+import itertools
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import trimesh
+from trimesh.intersections import slice_mesh_plane
 
 # Optional keys of the random packing generators (spheres.py, cylinders.py)
 PACKING_DEFAULTS = {
@@ -46,6 +53,7 @@ PACKING_DEFAULTS = {
     "seed": None,
     "max_attempts": 2000,
     "max_consecutive_failures": 100,
+    "periodic": False,
 }
 RADIUS_KEYS = {
     "gamma": ["gamma_shape", "gamma_scale", "radius_min", "radius_max"],
@@ -148,14 +156,19 @@ def place_objects(rng, radii, dim, params, batch_size=100):
     given radii inside a box of side params["domain_size"] centered at 0.
 
     Two objects overlap if the distance between their centers is less than
-    the sum of their radii plus params["min_gap"]. Objects that cannot be
+    the sum of their radii plus params["min_gap"]. With params["periodic"],
+    the distance is the minimum-image distance of the periodic box (the box
+    repeats in every direction), so objects near opposite faces cannot
+    overlap across the boundary. Objects that cannot be
     placed within params["max_attempts"] tries are skipped. Placement stops
     early after params["max_consecutive_failures"] skipped objects in a row,
     or on Ctrl+C, keeping the objects placed so far.
 
     Returns (centers, placed_radii) as arrays of shape (k, dim) and (k,).
     """
-    half = params["domain_size"] / 2
+    size = params["domain_size"]
+    half = size / 2
+    periodic = params["periodic"]
     min_gap = params["min_gap"]
     max_attempts = params["max_attempts"]
     max_consecutive_failures = params["max_consecutive_failures"]
@@ -177,9 +190,10 @@ def place_objects(rng, radii, dim, params, batch_size=100):
                 candidates = rng.uniform(-half, half, size=(n_candidates, dim))
                 attempts += n_candidates
 
-                distances = np.linalg.norm(
-                    candidates[:, None, :] - centers[None, :n_placed, :], axis=2
-                )
+                differences = candidates[:, None, :] - centers[None, :n_placed, :]
+                if periodic:
+                    differences -= size * np.round(differences / size)
+                distances = np.linalg.norm(differences, axis=2)
                 free = np.all(distances >= r + placed_radii[:n_placed] + min_gap, axis=1)
 
                 if free.any():
@@ -206,6 +220,57 @@ def place_objects(rng, radii, dim, params, batch_size=100):
     print(f"Placed {n_placed} of {len(radii)} objects "
           f"({n_skipped} skipped after {max_attempts} attempts without a free position)")
     return centers[:n_placed], placed_radii[:n_placed]
+
+
+def tile_periodic(objects, centers, radii, domain_size, axes):
+    """
+    Build a periodic tile of side domain_size centered at 0 from object meshes
+    (each already at its center). Objects that cross a face of the tile along
+    one of `axes` get shifted copies (by ±domain_size, up to 8 for a corner),
+    then everything is cut at the six faces without closing the cuts, so the
+    surfaces are open at the faces and continue in the next tile. The bounding
+    box of the result is then the tile, which is what the simulation uses as
+    the periodic voxel (checked). Objects along an axis not in `axes` (e.g.
+    cylinders along z) must be longer than the tile, so they are cut at both
+    faces. Returns the tile mesh (µm).
+    """
+    half = domain_size / 2
+    inside, crossing = [], []
+    for mesh, center, r in zip(objects, centers, radii):
+        shifts = []
+        for axis in range(3):
+            axis_shifts = [0.0]
+            if axis in axes:
+                if center[axis] + r > half:
+                    axis_shifts.append(-domain_size)
+                if center[axis] - r < -half:
+                    axis_shifts.append(domain_size)
+            shifts.append(axis_shifts)
+        if all(len(s) == 1 for s in shifts) and all(axis in axes for axis in range(3)):
+            inside.append(mesh)
+            continue
+        for shift in itertools.product(*shifts):
+            copy = mesh.copy()
+            copy.apply_translation(shift)
+            crossing.append(copy)
+
+    # Cut the objects that cross the faces (the others are inside the tile)
+    cut = trimesh.util.concatenate(crossing)
+    for axis in range(3):
+        for sign in [1, -1]:
+            normal = np.zeros(3)
+            normal[axis] = -sign                  # keep the side towards the center
+            origin = np.zeros(3)
+            origin[axis] = sign * half
+            cut = slice_mesh_plane(cut, plane_normal=normal, plane_origin=origin, cap=False)
+    tile = trimesh.util.concatenate(inside + [cut])
+
+    extent = tile.bounds
+    if not np.allclose(extent, [[-half] * 3, [half] * 3], rtol=0, atol=1e-6 * domain_size):
+        raise ValueError(f"The periodic tile does not reach every face of the box: mesh bounds "
+                         f"{extent.tolist()}, box ±{half}. Every face must be crossed by an object; "
+                         f"use more objects or another seed.")
+    return tile
 
 
 def format_value(value):
@@ -311,12 +376,15 @@ def plot_radii(radii, path, title):
     plt.close(fig)
 
 
-def save_substrate(mesh, name, params, results, title, config_path, radii=None, equal_aspect=True):
+def save_substrate(mesh, name, params, results, title, config_path, radii=None, equal_aspect=True,
+                   objects=None):
     """
     Save a substrate built in µm to substrate/<name>/: mesh CSVs (in meters),
     preview images, and a params JSON with inputs, results and provenance.
     If `radii` is given, a radius histogram and radius statistics are added.
-    Returns the output directory.
+    If `objects` (a DataFrame of object centers and radii in µm) is given, it
+    is saved in meters as <name>_objects.csv, e.g. to sample walker positions
+    inside or outside the objects. Returns the output directory.
     """
     output_dir = f"substrate/{name}"
     os.makedirs(output_dir, exist_ok=True)
@@ -333,6 +401,9 @@ def save_substrate(mesh, name, params, results, title, config_path, radii=None, 
     pd.DataFrame(mesh_m.faces, columns=["v1", "v2", "v3"]).to_csv(
         f"{output_dir}/{name}_faces.csv", index=False
     )
+
+    if objects is not None:
+        (objects * 1e-6).to_csv(f"{output_dir}/{name}_objects.csv", index=False)
 
     results = {**results, "mesh_watertight": bool(mesh.is_watertight)}
 

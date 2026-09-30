@@ -32,6 +32,12 @@ radius_max = 12
 # Used when radius_distribution = "fixed": every sphere has this radius.
 # radius_fixed = 5
 
+# Optional: build a periodic tile (default false). Overlaps are checked across
+# the faces of the cube, spheres crossing a face are wrapped to the opposite
+# side, and the mesh is cut at the faces, so the substrate repeats seamlessly
+# for simulations with periodic = true. The name gets "_periodic".
+# periodic = true
+
 # --- Placement (optional, defaults shown) ---
 # Random positions tried per sphere before it is skipped
 # max_attempts = 2000

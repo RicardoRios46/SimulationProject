@@ -1,5 +1,6 @@
 """
-Randomly packed, non-overlapping spheres in a cubic domain.
+Randomly packed, non-overlapping spheres in a cubic domain. With
+periodic = true, the substrate is a periodic tile (see common.tile_periodic).
 
 Usage (from the project root):
     pixi run -e trimesh-env python src/substrate/spheres.py substrate_configs/<config>.toml
@@ -12,7 +13,10 @@ parameters used.
 import numpy as np
 import trimesh
 
-from common import load_packing_params, sample_radii, place_objects, radius_name, format_value, save_substrate
+import pandas as pd
+
+from common import (load_packing_params, sample_radii, place_objects, tile_periodic, radius_name,
+                    format_value, save_substrate)
 
 params, config_path = load_packing_params(
     "Generate a substrate of randomly packed spheres.",
@@ -29,13 +33,19 @@ for center, r in zip(centers, radii):
     sphere = trimesh.creation.uv_sphere(radius=r)
     sphere.apply_translation(center)
     spheres.append(sphere)
-mesh = trimesh.util.concatenate(spheres)
+if params["periodic"]:
+    mesh = tile_periodic(spheres, centers, radii, params["domain_size"], axes=[0, 1, 2])
+else:
+    mesh = trimesh.util.concatenate(spheres)
 
-name = params["name"] or f"spheres_{len(radii)}_{radius_name(params)}_gap{format_value(params['min_gap'])}"
+name = params["name"] or (f"spheres_{len(radii)}_{radius_name(params)}_gap{format_value(params['min_gap'])}"
+                          + ("_periodic" if params["periodic"] else ""))
 
 results = {
     "n_placed": len(radii),
     "volume_fraction": float(np.sum(4 / 3 * np.pi * radii**3) / params["domain_size"] ** 3),
 }
 
-save_substrate(mesh, name, params, results, "Random non-overlapping spheres", config_path, radii=radii)
+objects = pd.DataFrame({"x": centers[:, 0], "y": centers[:, 1], "z": centers[:, 2], "radius": radii})
+save_substrate(mesh, name, params, results, "Random non-overlapping spheres", config_path, radii=radii,
+               objects=objects)

@@ -178,6 +178,7 @@ Config parameters (all lengths in µm):
 | `max_attempts`             | *Optional.* Random positions tried per object before it is skipped (default 2000) |
 | `max_consecutive_failures` | *Optional.* Stop after this many objects in a row could not be placed (default 100) |
 | `cylinder_length`          | Cylinder length along z (`cylinders.py` only)                        |
+| `periodic`                 | *Optional.* Build a periodic tile (default `false`; `spheres.py` only for now, see below) |
 
 Objects are placed one at a time at random non-overlapping positions. When
 the domain fills up, some objects cannot be placed and are skipped, so fewer
@@ -187,7 +188,25 @@ and the objects placed so far are saved.
 When `name` is omitted, the name is built from the parameters and the number
 of objects actually placed, with `p` as decimal point, e.g.
 `cylinders_2840_gamma_shape0p75_scale0p55_gap0p45` or
-`spheres_500_fixed_r5_gap1`.
+`spheres_500_fixed_r5_gap1` (with `_periodic` added for periodic tiles).
+
+With `periodic = false` (default), objects near the edge of the domain extend
+past it, and the simulated voxel (the bounding box of the mesh) is larger than
+the domain. Use these substrates with `periodic = false` in the simulation.
+
+With `periodic = true`, the substrate is a periodic tile of side
+`domain_size`, for simulations with `periodic = true`:
+
+- overlaps are checked with the minimum-image distance, so objects near
+  opposite faces cannot overlap across the boundary
+- objects that cross a face are copied to the opposite side(s), and the mesh
+  is cut at the faces without closing the cuts, so the surfaces continue in
+  the next tile
+- the bounding box of the mesh is then exactly the tile, which disimpy uses as
+  the periodic voxel (checked; the script stops if no object crosses some face)
+
+The volume fraction is then exact (the objects fill the tile periodically),
+and the mesh is not watertight (it is open at the faces), as intended.
 
 #### Single spheres: `single_spheres.py`
 
@@ -210,6 +229,7 @@ Each substrate from a config-file script is saved to `substrate/<name>/`:
 | `<name>_mesh.png`           | 3D preview (µm)                                                    |
 | `<name>_radii.png`          | Histogram of the placed radii (random packing only)               |
 | `<name>_cross_section.png`  | Top view of the cylinder packing (`cylinders.py` only)            |
+| `<name>_objects.csv`        | Object centers and radii in meters, in the frame of the mesh CSVs (`spheres.py` for now), e.g. to place walkers inside or outside the objects |
 
 `<name>_params.json` records everything needed to trace back or regenerate a
 substrate:

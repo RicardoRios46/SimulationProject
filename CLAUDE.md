@@ -172,6 +172,8 @@ Where things run:
 - Test by running the scripts with pixi. Regression reference with the
   template configs (seed 123):
   - `spheres.py`: 500 placed, volume_fraction 0.1726, radius_mean 3.347
+    (with `periodic = true`: 497 placed, volume_fraction 0.1613,
+    radius_mean 3.31)
   - `cylinders.py`: 2840 of 3000 placed, area_fraction 0.3139, radius_mean 0.595
   - `caterpillar.py` (single_axon_run3.csv): 1 cell, 55 spheres, 1 volume
 
