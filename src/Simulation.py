@@ -222,11 +222,12 @@ for filecount, file in enumerate(waveforms):
     #Load gradient waveform
     x_grad, y_grad, z_grad = read_shape(f"waveforms/{file}")
 
-    duration = len(x_grad)*raster_time
-    time_points = np.arange(0,duration,raster_time)
+    #One time point per row. (np.arange(0, duration, raster_time) gave one
+    #point too many for some lengths, e.g. 6961 for 6960 rows, from rounding)
+    n_points = len(x_grad)
 
     #Create gradient array
-    gradient = np.zeros([1,len(time_points),3])
+    gradient = np.zeros([1,n_points,3])
 
     gradient[0,:,0] = x_grad
     gradient[0,:,1] = y_grad
@@ -238,7 +239,7 @@ for filecount, file in enumerate(waveforms):
     print(f"Bval: {(gradients.calc_b(gradient,raster_time*1e-3)*1e-6)[0]:.0f}")
 
     #Rotate gradient into all directions
-    gradient_final = np.zeros([len(rot_matrix), len(time_points), 3])
+    gradient_final = np.zeros([len(rot_matrix), n_points, 3])
 
     for i in range(0, len(rot_matrix)):
         rot_waveform = gradient @ rot_matrix[i].T
