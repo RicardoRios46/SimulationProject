@@ -346,7 +346,8 @@ The centroid frequency is the power-weighted mean frequency of the dephasing
 spectrum |Q(f)|², computed over the full spectrum. It is shown per axis
 (dashed lines) and combined over the three axes (solid line), using their
 total power. The combined value does not depend on the waveform orientation;
-the per-axis values do. Note that the gradient spectrum |G(f)|² = (2πf)²|Q(f)|²
+the per-axis values do. The dephasing spectrum is the intended definition
+(checked with collaborators); the gradient spectrum |G(f)|² = (2πf)²|Q(f)|²
 would give higher centroids.
 
 To compare several waveforms, e.g. to check that the axes of an STE match its

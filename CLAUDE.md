@@ -135,7 +135,9 @@ Where things run:
   both use the calculations in `src/waveform_utils.py`. At file amplitude the current waveforms all have
   b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
   b-tensor; they differ in the spectral content per axis. Centroid frequencies
-  (dephasing spectrum): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
+  (dephasing spectrum |Q(f)|^2, checked with the collaborators on
+  2026-09-30 as the right choice; the gradient spectrum |G(f)|^2 =
+  (2 pi f)^2 |Q(f)|^2 would give higher centroids): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
   axes; STEaniso x/y/z 8.4/47.9/98.8 Hz (combined 51.3 Hz). TDE50hz and
   TDE100hz: 139.2 ms (6960 rows), isotropic b-tensor, b 4500 per axis (13500
   total at file amplitude), centroids 47.6 and 98.6 Hz on every axis. TDE0hz
@@ -231,7 +233,7 @@ Where things run:
 
 - Both scripts identify waveforms from their files (`waveform_info` in
   `analysis_utils.py`): encoding from the b-tensor shape, frequency = centroid
-  of |Q(f)|^2 (follows the pending |Q|^2 vs |G|^2 decision). The frequency
+  of |Q(f)|^2 (checked with collaborators, see Waveform files). The frequency
   fits of D/K/V have one panel per encoding (LTE, STE), ready for STE
   waveforms at several frequencies; STE has only 2 waveforms now (no fits).
   STEaniso is classed as STE, but its axes have different frequencies, so its
@@ -297,10 +299,6 @@ Where things run:
 - Add the M restriction tensor (related to the spectral content of the
   waveform) to `src/plot_waveforms.py` (and the shared `src/waveform_utils.py`).
   The user will point to the literature for how to calculate it.
-- The waveform scripts use the dephasing spectrum |Q(f)|^2 for the
-  encoding spectrum and the centroid frequencies. The user is checking with a
-  collaborator whether the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 is
-  the usual choice; it may need to change (it gives higher centroids).
 - Explore different rotation schemes (files in `rotations/`) and compare
   whether signals and fitted parameters differ between the STEiso and
   STEaniso waveforms.

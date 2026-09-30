@@ -55,8 +55,9 @@ def analyze_waveform(file, raster_time_ms=0.02, gradient_scale=1e-3):
     # Centroid (power-weighted mean) frequencies of the dephasing spectrum
     # |Q(f)|^2, over the full spectrum. Per axis, and combined from the total
     # power of the three axes, which does not depend on the waveform
-    # orientation. NOTE: the dephasing spectrum is used here; the gradient
-    # spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2 would give higher centroids.
+    # orientation. The dephasing spectrum is the intended definition (checked
+    # with collaborators); the gradient spectrum |G(f)|^2 = (2 pi f)^2 |Q(f)|^2
+    # would give higher centroids.
     axis_power = power.sum(axis=0)
     has_power = axis_power > 1e-12 * axis_power.max()
     centroids = [freqs @ power[:, i] / axis_power[i] if has_power[i] else None for i in range(3)]
