@@ -253,6 +253,11 @@ Where things run:
   Simulation settings).
 - Compute V_iso from the STE powder-average fits at each frequency. Needs the
   STE waveforms at every frequency (see Waveforms and protocol).
+  Diffusion time: the TDE waveforms last 139.2 ms (each axis encoded in its
+  own time window), the LTE/STEiso/STEaniso waveforms 58.16 ms. Comparing V
+  (or V_iso) between a TDE and an LTE/STE at the same centroid frequency also
+  compares different encoding times; revisit this when comparing V_iso
+  between waveforms (user's note, 2026-09-30).
 
 ### Waveforms and protocol
 
