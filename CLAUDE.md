@@ -162,6 +162,18 @@ Where things run:
 
 ### Simulation and environment
 
+- NEXT ON THE CLUSTER MACHINE: test the TDE simulations (TDE waveforms and
+  `config_template_tde.toml` were made on 2026-09-29 on the Windows machine,
+  not yet run). On the login node: `git pull` on `dev`, `pixi install -e
+  disimpy-env`, create TDE configs from `sim_configs/config_template_tde.toml`
+  (set the substrate and rotation file; `n_t = 24000` keeps the 5.8 µs time
+  step of n_t 10000 at 58.16 ms), and submit a small test (e.g. the template
+  spheres and cylinders, 100k walkers). Check: the run completes, the run
+  times in the metadata (~2.4x those at n_t 10000), and the analysis
+  (`fit_powder_average.py` should classify TDE50hz/TDE100hz as STE with
+  centroids ~47.6 and ~98.6 Hz). A config mixing TDE with 58.16 ms waveforms
+  now stops with an error, by design.
+
 - Update `disimpy-env` so simulations can also run on the local Windows
   workstation (RTX 5060, compute capability 12.0). Likely needs a newer
   stack: Python >=3.10, current numba with the `numba-cuda` package, and

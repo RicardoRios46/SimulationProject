@@ -18,8 +18,12 @@ position = "intra"
 # Number of random walkers for the main signal simulation
 n_walkers = 100000
 
-# Number of simulation timesteps
-n_t = 1000
+# Number of simulation timesteps. The time step is the waveform duration / n_t,
+# and the step length sqrt(6 D dt). n_t = 10000 for the 58.16 ms waveforms
+# (5.8 us, 0.19 um at D = 1 um^2/ms), chosen from the n_t convergence test.
+# For longer waveforms scale n_t with the duration to keep the same time step
+# (e.g. 24000 for the 139.2 ms TDE waveforms, see config_template_tde.toml).
+n_t = 10000
 
 # Diffusivity, in m^2/s
 diffusivity = 2e-9
@@ -31,7 +35,9 @@ diffusivity = 2e-9
 
 [waveform]
 # One or more gradient waveform files (x,y,z CSV, MATLAB format), relative to waveforms/
-# Each file must be an N x 3 CSV (x,y,z columns).
+# Each file must be an N x 3 CSV (x,y,z columns). All files must have the same
+# duration (number of rows): they are simulated with one time step, and a config
+# that mixes durations stops with an error.
 waveform_file = [
     "pgse.csv",
     "oscillating.csv",

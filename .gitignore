@@ -5,7 +5,10 @@
 /slurm_outputs
 /graphOutputs
 /substrate
-/sim_configs
+
+# Simulation configs are local, only the templates are tracked
+/sim_configs/*
+!/sim_configs/config_template*.toml
 
 archive_Cole
 archive_Ricardo

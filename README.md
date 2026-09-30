@@ -273,11 +273,14 @@ the templates:
 
 - `sim_configs/config_template.toml`: every option, with comments
 - `sim_configs/config_template_minimal.toml`: the same options, without comments
+- `sim_configs/config_template_tde.toml`: set up for the TDE waveforms
+  (`TDE50hz.csv`, `TDE100hz.csv`), with `n_t = 24000` for their longer duration
 
 **The config filename (without extension) is used as the base name for all
 output files**, so give each config a descriptive name.
 
-`sim_configs/` is git-ignored, so only the two templates are version-controlled.
+`sim_configs/` is git-ignored except the `config_template*.toml` files, so only
+the templates are version-controlled.
 Your own configs stay local, and each run's full config is saved in its
 metadata JSON.
 
@@ -296,7 +299,7 @@ metadata JSON.
 | Key           | Description                                                                 |
 |---------------|-----------------------------------------------------------------------------|
 | `n_walkers`   | Number of random walkers                                                    |
-| `n_t`         | Number of simulation time steps                                             |
+| `n_t`         | Number of simulation time steps. The time step is the waveform duration / `n_t`: `n_t = 10000` for the 58.16 ms waveforms (5.8 µs, step length 0.19 µm at D = 1 µm²/ms, from the convergence test). Scale it with the duration for longer waveforms, e.g. `n_t = 24000` for the 139.2 ms TDE waveforms |
 | `diffusivity` | Diffusivity in m²/s (e.g. `2e-9`)                                           |
 | `seed`        | *Optional.* Fixed Monte Carlo seed. If omitted, a random seed is generated. The seed is always saved in the metadata file |
 

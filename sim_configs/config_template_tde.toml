@@ -1,0 +1,42 @@
+# Template configuration file for simulation.py with the TDE (triple
+# diffusion encoding) waveforms. See config_template.toml for all the options.
+# Copy this file, rename it (the filename, without extension, becomes the
+# basename used for all output files), and edit the values below.
+
+[substrate]
+# Name of the substrate mesh (substrate/<name>/<name>_vertices.csv, _faces.csv)
+name = "example_substrate"
+periodic = true
+position = "intra"
+
+[simulation]
+n_walkers = 100000
+
+# The TDE waveforms last 139.2 ms (6960 rows), 2.4 times the 58.16 ms of the
+# LTE/STE waveforms. n_t is scaled to keep the same time step as n_t = 10000
+# for the 58.16 ms waveforms (5.8 us, step length 0.19 um at D = 1 um^2/ms):
+# 139.2 ms / 5.8 us = ~24000.
+n_t = 24000
+
+diffusivity = 2e-9
+
+# Optional: fix the Monte Carlo seed for reproducibility (random if omitted,
+# recorded in the metadata either way).
+# seed = 42
+
+[waveform]
+# TDE waveforms only: all waveforms in a config must have the same duration,
+# so the 58.16 ms LTE/STE waveforms go in their own configs.
+# (TDE0hz_broken.csv is not an STE; do not use it.)
+waveform_file = ["TDE50hz.csv", "TDE100hz.csv"]
+
+# Rotation matrix file(s), relative to rotations/ (one file for all waveforms,
+# or one per waveform)
+rotation_file = "rotations_40.txt"
+
+# Target b-values (s/mm^2), 0-4500 in steps of 500 as in the test runs
+b_targets = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
+
+[trajectory]
+enabled = false
+n_walkers = 10
