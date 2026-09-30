@@ -16,7 +16,6 @@ The project uses:
 ```text
 .
 ├── batch/                  # SLURM batch scripts (single config / job array)
-├── CATERPillar_inputs/     # Raw CATERPillar outputs used to build substrates
 ├── rotations/              # Rotation matrix sets applied to each waveform
 ├── sim_configs/            # Simulation configuration files (TOML) + templates
 ├── substrate_configs/      # Substrate generator configuration files (TOML) + templates
@@ -136,7 +135,7 @@ The scripts in `src/substrate/` build meshes with trimesh and write them to
 | `cylinders.py`                  | Randomly packed parallel cylinders, gamma or fixed radius   | Config file           |
 | `spheres.py`                    | Randomly packed spheres, gamma or fixed radius              | Config file           |
 | `single_spheres.py`             | One single-sphere substrate per radius                      | Config file           |
-| `caterpillar.py`                | Converts a CATERPillar output file to a mesh (see below)    | Config file           |
+| `caterpillar.py`                | Converts a CATERPillar output file to a mesh (see below)    | Command-line options  |
 | `view_substrate.py`             | Re-plots an existing substrate (see below)                  | Command-line options  |
 
 The scripts marked "Config file" use the shared helpers in
@@ -265,30 +264,51 @@ pixi run -e trimesh-env python src/substrate/view_substrate.py <name> [--elev 20
 
 ### CATERPillar substrates
 
-CATERPillar outputs (e.g. `CATERPillar_inputs/single_axon_run3.csv`) describe
-each cell as a chain of overlapping spheres, one per row, with the columns
-`cell_type cell_id component component_id X Y Z inner_radius outer_radius`
-(µm). `caterpillar.py` creates one sphere per row and merges the spheres of
-each cell (`cell_type` + `cell_id`) into one surface, so every axon stays a
-separate compartment. The cells are then combined into one substrate:
+[CATERPillar](https://github.com/Mic-map/CATERPillar) grows axons and glial
+cells from a JSON config and outputs each cell as a chain of overlapping
+spheres, one per row, with the columns `cell_type cell_id component
+component_id X Y Z inner_radius outer_radius` (µm). `caterpillar.py` creates
+one sphere per row and merges the spheres of each cell (`cell_type` +
+`cell_id`) into one surface, so every cell stays a separate compartment, and
+combines the cells into one substrate.
 
-```bash
-cp substrate_configs/caterpillar_template.toml substrate_configs/my_caterpillar.toml
-pixi run -e trimesh-env python src/substrate/caterpillar.py substrate_configs/my_caterpillar.toml
+Everything for one CATERPillar substrate is kept in one folder:
+
+```text
+substrate_configs/caterpillar/<run>.json   # CATERPillar config (git-ignored; templates *_template.json tracked)
+substrate/caterpillar_<run>/
+├── caterpillar/                          # CATERPillar's config, output and growth info
+│   ├── <run>.json, <run>.csv, <run>_growth_info.txt
+└── caterpillar_<run>_vertices.csv, ...   # the converted substrate (as for spheres/cylinders)
 ```
 
-| Parameter              | Description                                                             |
-|------------------------|-------------------------------------------------------------------------|
-| `input_file`           | CATERPillar output file, relative to the project root                   |
-| `name`                 | *Optional.* Substrate name (default `caterpillar_<input file name>`)    |
-| `radius_column`        | *Optional.* `"inner_radius"` (the axon itself, default) or `"outer_radius"` (including the myelin sheath) |
-| `cell_types`           | *Optional.* Only use these cell types, e.g. `["axon"]` (default: all rows) |
-| `sphere_subdivisions`  | *Optional.* Icosphere resolution of each sphere: 1 = 80 faces, 2 = 320 faces (default 1) |
-| `smoothing_iterations` | *Optional.* Laplacian smoothing iterations after merging, 0 = off (default 1). The total volume is kept constant |
+1. Copy a config to `substrate_configs/caterpillar/<run>.json` and set
+   `"Filename": "<run>"` and `"OutputDirectory": "substrate/caterpillar_<run>/caterpillar"`
+   (copy the JSON into that folder too, to keep it with the substrate).
+2. Run CATERPillar: `./CATERPillar --config substrate_configs/caterpillar/<run>.json`
+3. Convert:
+
+```bash
+pixi run -e trimesh-env python src/substrate/caterpillar.py substrate/caterpillar_<run>/caterpillar/<run>.csv
+```
+
+A CSV given from another place is copied into `substrate/<name>/caterpillar/`,
+with its `<run>.json` and `<run>_growth_info.txt` if they are next to it.
+There is no converter config file: the options only set the mesh and are
+recorded in `<name>_params.json`:
+
+| Option                   | Description                                                             |
+|--------------------------|-------------------------------------------------------------------------|
+| `--name`                 | Substrate name (default `caterpillar_<run>`, from the CSV file name)    |
+| `--radius-column`        | `inner_radius` (the axon itself, default) or `outer_radius` (including the myelin sheath) |
+| `--cell-types`           | Only use these cell types, e.g. `--cell-types axon` (default: all rows) |
+| `--sphere-subdivisions`  | Icosphere resolution of each sphere: 1 = 80 faces, 2 = 320 faces (default 1) |
+| `--smoothing-iterations` | Laplacian smoothing iterations after merging, 0 = off (default 1). The total volume is kept constant |
 
 The results in `<name>_params.json` include the number of cells and spheres,
 the number of separate volumes in the final mesh (normally one per cell), and
-the mesh volume.
+the mesh volume. CATERPillar substrates are not periodic: simulate them with
+`periodic = false`.
 
 ## 2. Simulation Configuration
 

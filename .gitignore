@@ -22,3 +22,6 @@ __pycache__/
 # Substrate configs are local, only the templates are tracked
 /substrate_configs/*
 !/substrate_configs/*_template.toml
+!/substrate_configs/caterpillar/
+/substrate_configs/caterpillar/*
+!/substrate_configs/caterpillar/*_template.json

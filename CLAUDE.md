@@ -77,15 +77,22 @@ Where things run:
 
 - Units: all lengths in substrate configs and params are µm; mesh CSVs
   (`substrate/<name>/<name>_vertices.csv`) are in meters, as disimpy expects.
-- Substrate generators (`cylinders.py`, `spheres.py`, `single_spheres.py`,
-  `caterpillar.py`) read a TOML config from `substrate_configs/` and use
+- Substrate generators (`cylinders.py`, `spheres.py`, `single_spheres.py`)
+  read a TOML config from `substrate_configs/` and use
   `src/substrate/common.py`: `load_params` / `load_packing_params` (rejects
   unknown and missing keys), `save_substrate` (mesh CSVs, previews,
   `<name>_params.json` with params, results and provenance incl. git commit).
   New generators should follow this pattern and the shared parameter names
   (`n_objects`, `domain_size`, `min_gap`, `radius_distribution`,
   `gamma_shape`, `gamma_scale`, `radius_min`, `radius_max`, `radius_fixed`,
-  `seed`, ...).
+  `seed`, ...). Exception: `caterpillar.py` takes the CATERPillar CSV and
+  command-line options (user's decision: the substrate is defined by the
+  CATERPillar JSON; the options only set the mesh). Everything for one
+  CATERPillar substrate is in `substrate/caterpillar_<run>/`, with
+  CATERPillar's JSON, CSV and growth info in its `caterpillar/` subfolder
+  (the converter copies them there if the CSV is elsewhere); JSON configs in
+  `substrate_configs/caterpillar/` (only `*_template.json` tracked;
+  CATERPillar's `example_config.json` kept there untracked for reference).
 - Numbers in generated names use `p` as decimal point (`format_value`),
   e.g. `cylinders_2840_gamma_shape0p75_scale0p55_gap0p45`.
 - Config folders `sim_configs/` and `substrate_configs/` are git-ignored
@@ -205,7 +212,6 @@ Where things run:
   - `cylinders.py` (template: 60 µm tile, 1200 cylinders, gamma 4/0.12 µm,
     radii 0.15-1.5 µm, gap 0.1 µm, periodic): 1198 placed, area_fraction
     0.2971, radius_mean 0.4861
-  - `caterpillar.py` (single_axon_run3.csv): 1 cell, 55 spheres, 1 volume
 
 ## Open work and known issues
 
@@ -258,8 +264,9 @@ Where things run:
 
 - `caterpillar.py` does not check whether different cells overlap.
 - CATERPillar `inner_radius` vs `outer_radius` (myelin): default is
-  `inner_radius`; the user is not yet sure which to use (the current input
-  file has them equal).
+  `inner_radius`; to be replaced by using both surfaces (see the converter
+  work in the CATERPillar notes). The old example `single_axon_run3.csv`
+  was removed (2026-09-30); new configurations will be made.
 - Substrates generated before the generator refactor use old names
   (e.g. `sphereRadius_0.5`) and old sphere radius sampling (clipped gamma).
   These old substrates and their outputs are not being reproduced: the old
