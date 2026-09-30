@@ -120,7 +120,18 @@ Where things run:
     b-values) and 100k walkers: ~16 s + ~20 s per 1000 steps (n_t 10000:
     ~3.6 min); 3600 gradients at n_t 1000 took 46 s vs 34 s for 1800, and
     the TDE test (1080 gradients, n_t 24000) ~19 s per 1000 steps: the run
-    time depends mostly on steps x walkers, little on the gradients. Setup
+    time depends mostly on steps x walkers, little on the gradients.
+  - n_t for thin axons (job 210509, `sim_configs/ntconv2_*`, cylinders
+    with mean r 0.35 µm, min 0.1 µm, gap 0.1 µm, intra and extra, 100k
+    walkers, n_t 10000/20000/50000/100000 = step 0.19/0.13/0.084/0.059 µm):
+    intra is converged from n_t 10000 (D, K, V, RD, FA unchanged within
+    noise; RD 0.0032 at every n_t for LTE0); extra changes slightly from
+    10000 to 20000 (LTE0 RD 0.743 -> 0.747-0.749, DKI AD 1.013 -> 1.001),
+    then stays within the noise up to 100000. Recommendation: n_t 20000 for
+    the 58.16 ms waveforms (and 48000 for the 139.2 ms TDE, same 2.9 µs
+    step); the production cylinders have thicker axons (mean r 0.49, min
+    0.15 µm), so this is conservative. Timing: ~23 s per 1000 steps for
+    1800 gradients and 100k walkers (n_t 100000: 39 min), setup ~130 s. Setup
     (mesh loading) ~30 s for the spheres, ~55-70 s for the cylinders. The
     metadata `run` section records the times of each run.
   - Monte Carlo noise, from the seed test (`sim_configs/seedtest_*`, 5 seeds
@@ -327,7 +338,17 @@ Where things run:
   both radii in the objects file. Revisit the intra-axonal area fraction
   (0.30 now) then.
 - CATERPillar (https://github.com/Mic-map/CATERPillar; paper bioRxiv
-  2025.06.20.660694). Findings from its code and paper (2026-09-30):
+  2025.06.20.660694). STATUS (2026-09-30, paused to run the V_iso
+  simulations; resume here): done: findings below, folder layout and
+  `caterpillar.py` taking the CSV + options (commit 4ac1700), cylinders using
+  CATERPillar's validated axon radii. Next: (1) the JSON templates
+  `substrate_configs/caterpillar/wm_mouse_template.json` and
+  `gm_mouse_template.json` with the values in the plan below (WM needs the
+  user's decision on the myelinated/unmyelinated fractions first); (2) the
+  converter work listed below (objects file with both-surface myelin, then
+  the central start region); (3) a first small run (50 µm voxel) to check
+  CATERPillar's run time and the mesh size.
+  Findings from its code and paper (2026-09-30):
   - Config (JSON, run as `./CATERPillar --config <file>.json`): `Alpha`,
     `Beta` are a gamma of the INNER axon radius (µm; the code adds pi r^2 to
     the ICVF and compares with `MinRadius`); myelinated outer radius =
