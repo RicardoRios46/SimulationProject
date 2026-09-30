@@ -34,6 +34,8 @@ trimesh = "*"
 matplotlib = "*"
 # Needed by trimesh for mesh.split() (counting separate volumes)
 scipy = "*"
+# Needed by trimesh for slice_mesh_plane() (cutting periodic substrates at the tile faces)
+shapely = "*"
 
 [feature.trimesh.pypi-dependencies]
 # Needed for trimesh.boolean.union(..., engine="manifold") in the substrate scripts
