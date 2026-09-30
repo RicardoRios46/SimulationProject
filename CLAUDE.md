@@ -138,8 +138,10 @@ Where things run:
   (dephasing spectrum): LTE0/50/100hz 8.4/47.3/98.5 Hz; STEiso ~47.6 Hz on all
   axes; STEaniso x/y/z 8.4/47.9/98.8 Hz (combined 51.3 Hz). TDE50hz and
   TDE100hz: 139.2 ms (6960 rows), isotropic b-tensor, b 4500 per axis (13500
-  total at file amplitude), centroids 47.6 and 98.6 Hz on every axis; they
-  must be simulated in their own configs (longer duration).
+  total at file amplitude), centroids 47.6 and 98.6 Hz on every axis. TDE0hz
+  (from `make_tde0hz_waveforms.py`, design `pgse_full`): 6960 rows,
+  isotropic, 8.6 Hz on every axis. The TDEs must be simulated in their own
+  configs (longer duration).
 - Shell scripts must keep LF line endings (enforced in `.gitattributes`).
 - `src/substrate/archive/` holds unmaintained beaded axon scripts kept for
   reference; don't update them unless asked.
@@ -170,8 +172,9 @@ Where things run:
   step of n_t 10000 at 58.16 ms), and submit a small test (e.g. the template
   spheres and cylinders, 100k walkers). Check: the run completes, the run
   times in the metadata (~2.4x those at n_t 10000), and the analysis
-  (`fit_powder_average.py` should classify TDE50hz/TDE100hz as STE with
-  centroids ~47.6 and ~98.6 Hz). A config mixing TDE with 58.16 ms waveforms
+  (`fit_powder_average.py` should classify TDE0hz/TDE50hz/TDE100hz as STE
+  with centroids ~8.6, ~47.6 and ~98.6 Hz, which gives the STE panel its
+  first frequency-model fits). A config mixing TDE with 58.16 ms waveforms
   now stops with an error, by design.
 
 - Update `disimpy-env` so simulations can also run on the local Windows
@@ -261,19 +264,25 @@ Where things run:
 
 ### Waveforms and protocol
 
-- STE at every LTE frequency: TDE (triple diffusion encoding) waveforms
-  `TDE50hz`, `TDE100hz` built by `src/make_tde_waveforms.py` from the LTE
-  files (x, y, z first halves, gap, x, y, z second halves; 139.2 ms). TODO
-  0 Hz: the PGSE half does not return q to 0, so the axes overlap in q and the
-  b-tensor is not isotropic (eigenvalues/b 0.78, 0.19, 0.03 for x-y-z; no
-  order of the second halves or axis signs fixes it; z-y-x is worse, 0.89,
-  0.09, 0.03). `make_tde_waveforms.py` still writes it, with a warning, as
-  `TDE0hz_broken.csv` so the user can show the problem (see
-  `graphOutputs/waveforms/TDE0hz_broken.png`: overlapping q plateaus). Each
-  axis must be refocused before the next starts, which with
-  one refocusing pulse needs gradient reversals within each half (moves the
-  spectrum away from 0 Hz). The user will discuss the 0 Hz design with a
-  collaborator.
+- STE at every LTE frequency (done 2026-09-30): TDE (triple diffusion
+  encoding) waveforms `TDE50hz`, `TDE100hz` built by
+  `src/make_tde_waveforms.py` from the LTE files (x, y, z first halves, gap,
+  x, y, z second halves; 139.2 ms). 0 Hz: the same construction fails (the
+  PGSE half does not return q to 0, so the axes overlap in q: eigenvalues/b
+  0.78, 0.19, 0.03 for x-y-z; no order of the second halves fixes it, z-y-x
+  is worse, 0.89, 0.09, 0.03), so `make_tde_waveforms.py` now stops for 0 Hz.
+  `src/make_tde0hz_waveforms.py` builds it instead: the waveforms are only
+  for simulations (not for a scanner), so the refocusing pulse gap is
+  ignored; three equal windows (one per axis) over the TDE50hz length, each
+  a + and a - lobe (LTE0hz ramp) with an optional plateau, so q returns to 0
+  before the next axis. Designs `bipolar`, `pgse` (with lead/tail zeros),
+  `bipolar_full`, `pgse_full` (one zero row at each end): 9.6, 9.4, 8.9,
+  8.6 Hz, all isotropic. The user chose `pgse_full` (closest to LTE0's
+  8.4 Hz) as `waveforms/TDE0hz.csv`; the collaborator had suggested the
+  bipolar one. The candidates are git-ignored and the script is kept to
+  revisit them. With one refocusing pulse a scanner version would need the
+  pulse in the middle (explored: a design with y straddling the gap), but
+  that is not needed here.
   Also tried (2026-09-30, not saved): the same LTE waveform on x, y and z at
   the same time ("xyz - pulse - xyz") is just an LTE along (1,1,1), so the
   b-tensor is linear (1, 0, 0) at every frequency, also with sign flips. The

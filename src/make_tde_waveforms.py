@@ -9,17 +9,17 @@ The first and second halves, the gap for the refocusing pulse and the lead
 and tail zeros are taken from waveforms/LTE<f>hz.csv (the second half already
 includes the sign flip of the 180° pulse). The b-tensor is isotropic only if
 each half returns q to 0 on its own (true for the oscillating 50 and 100 Hz
-LTE waveforms). This is checked: if a half does not return q to 0 (the 0 Hz
-PGSE waveform), the q of each axis stays on while the next axes play, the
-b-tensor is not isotropic, and the waveform is still written, with a warning
-and "_broken" in its name, e.g. to show the problem.
+LTE waveforms). This is checked: the 0 Hz PGSE half does not return q to 0,
+so the q of each axis would stay on while the next axes play and the b-tensor
+would not be isotropic. The 0 Hz TDE is made by make_tde0hz_waveforms.py
+instead.
 
-Writes, for each frequency f, waveforms/TDE<f>hz.csv (N x 3), or
-waveforms/TDE<f>hz_broken.csv if the check fails. Its x, y and z components
-are the LTE waveform blocks, so no separate component files are written.
+Writes, for each frequency f, waveforms/TDE<f>hz.csv (N x 3). Its x, y and z
+components are the LTE waveform blocks, so no separate component files are
+written.
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/make_tde_waveforms.py [--frequencies 0 50 100]
+    pixi run -e dipy-env python src/make_tde_waveforms.py [--frequencies 50 100]
 
 Check the results with plot_waveforms.py and compare_waveforms.py.
 """
@@ -29,8 +29,8 @@ import argparse
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Build TDE waveforms from the LTE waveforms.")
-parser.add_argument("--frequencies", nargs="+", type=int, default=[0, 50, 100],
-                    help="Frequencies (Hz) of the LTE waveforms to use, waveforms/LTE<f>hz.csv (default 0 50 100)")
+parser.add_argument("--frequencies", nargs="+", type=int, default=[50, 100],
+                    help="Frequencies (Hz) of the LTE waveforms to use, waveforms/LTE<f>hz.csv (default 50 100)")
 args = parser.parse_args()
 
 for frequency in args.frequencies:
@@ -51,14 +51,14 @@ for frequency in args.frequencies:
     tail = len(g) - nonzero[-1] - 1
 
     # Each half must return q to 0 on its own, otherwise the axes overlap in q
-    # and the b-tensor is not isotropic: the waveform is still written, marked broken
+    # and the b-tensor is not isotropic
     refocused = all(abs(np.cumsum(half)[-1]) <= 1e-6 * np.abs(np.cumsum(half)).max()
                     for half in [first, second])
-    name = f"TDE{frequency}hz" if refocused else f"TDE{frequency}hz_broken"
     if not refocused:
-        print(f"WARNING: the halves of {lte_file} do not return q to 0 on their own, so the "
-              f"axes overlap in q and the b-tensor of this TDE is NOT isotropic (not an STE). "
-              f"Writing it as {name} to show the problem.")
+        raise SystemExit(f"Error: the halves of {lte_file} do not return q to 0 on their own, so "
+                         f"the axes would overlap in q and the TDE would not be an STE. For the "
+                         f"0 Hz TDE use make_tde0hz_waveforms.py.")
+    name = f"TDE{frequency}hz"
 
     n = len(first)
     tde = np.zeros((lead + 3 * n + gap + 3 * len(second) + tail, 3))

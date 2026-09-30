@@ -31,8 +31,7 @@ seed = 123
 [waveform]
 # TDE waveforms only: all waveforms in a config must have the same duration,
 # so the 58.16 ms LTE/STE waveforms go in their own configs.
-# (TDE0hz_broken.csv is not an STE; do not use it.)
-waveform_file = ["TDE50hz.csv", "TDE100hz.csv"]
+waveform_file = ["TDE0hz.csv", "TDE50hz.csv", "TDE100hz.csv"]
 
 # Rotation matrix file(s), relative to rotations/ (one file for all waveforms,
 # or one per waveform); the same rotations as the STE waveforms

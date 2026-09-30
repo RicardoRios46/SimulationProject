@@ -30,6 +30,7 @@ The project uses:
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
 │   ├── compare_waveforms.py # Overlay several waveforms to compare them (dipy-env)
 │   ├── make_tde_waveforms.py # Build TDE waveforms from the LTE waveforms (dipy-env)
+│   ├── make_tde0hz_waveforms.py # Build the 0 Hz TDE (and other candidate designs) (dipy-env)
 │   ├── waveform_utils.py   # Shared waveform calculations
 │   └── substrate/          # Substrate generation scripts (trimesh-env)
 │       └── archive/        # Unmaintained beaded axon scripts, kept for reference
@@ -274,7 +275,8 @@ the templates:
 - `sim_configs/config_template.toml`: every option, with comments
 - `sim_configs/config_template_minimal.toml`: the same options, without comments
 - `sim_configs/config_template_tde.toml`: set up for the TDE waveforms
-  (`TDE50hz.csv`, `TDE100hz.csv`), with `n_t = 24000` for their longer duration
+  (`TDE0hz.csv`, `TDE50hz.csv`, `TDE100hz.csv`), with `n_t = 24000` for their
+  longer duration
 
 **The config filename (without extension) is used as the base name for all
 output files**, so give each config a descriptive name.
@@ -378,7 +380,8 @@ frequencies) is printed and saved as `<name>.csv`.
 the frequencies of the LTE waveforms, built from them with:
 
 ```bash
-pixi run -e dipy-env python src/make_tde_waveforms.py [--frequencies 0 50 100]
+pixi run -e dipy-env python src/make_tde_waveforms.py [--frequencies 50 100]
+pixi run -e dipy-env python src/make_tde0hz_waveforms.py
 ```
 
 For each frequency f it concatenates the blocks of `waveforms/LTE<f>hz.csv` on
@@ -388,16 +391,34 @@ writes `waveforms/TDE<f>hz.csv` (each axis is the LTE waveform, shifted, so no
 component files are written). The b-tensor is isotropic
 only if each half of the LTE waveform returns q to 0 on its own, which the
 script checks. This holds for 50 and 100 Hz but not for the 0 Hz PGSE
-waveform: its q stays on while the other axes play, so the axes overlap in q
-and the b-tensor is not isotropic (eigenvalues/b 0.78, 0.19, 0.03). It is
-still written, with a warning, as `TDE0hz_broken.csv`, to show the problem;
-do not use it as an STE.
+waveform: its q stays on while the other axes play, so the axes would overlap
+in q and the b-tensor would not be isotropic (eigenvalues/b 0.78, 0.19,
+0.03); the script stops with an error for 0 Hz.
 
-The TDE waveforms last 139.2 ms (6960 rows) instead of 58.16 ms. Per axis
-they have the same b-value and nearly the same centroid frequency as the LTE
-waveform (TDE50hz 47.6 Hz vs 47.3 Hz, TDE100hz 98.6 Hz vs 98.5 Hz), but the
-two blocks of each axis are further apart, which adds finer structure to the
-spectrum. Because of the longer duration, run them in their own simulation
+The 0 Hz TDE is built by `make_tde0hz_waveforms.py` instead. These waveforms
+are only for simulations, so it ignores the refocusing pulse gap: the 139.2 ms
+(the TDE50hz length) are split into three windows, one per axis, and in each
+window a positive and a negative lobe (with the LTE0hz ramp) return q to 0,
+with a plateau of zeros in between. It builds four candidate designs,
+`waveforms/TDE0hz_designs/TDE0hz_<design>.csv` (git-ignored):
+
+| Design         | q per axis                      | Lead/tail zeros    | Centroid |
+|----------------|---------------------------------|--------------------|----------|
+| `bipolar`      | triangle (lobes back to back)   | as TDE50hz         | 9.6 Hz   |
+| `pgse`         | trapezoid, LTE0hz plateau (15%) | as TDE50hz         | 9.4 Hz   |
+| `bipolar_full` | triangle                        | one zero row each  | 8.9 Hz   |
+| `pgse_full`    | trapezoid, LTE0hz plateau (15%) | one zero row each  | 8.6 Hz   |
+
+`pgse_full`, the closest to the 8.4 Hz of LTE0hz, is also written as
+`waveforms/TDE0hz.csv`, the 0 Hz TDE. All designs have an isotropic b-tensor
+and the length of TDE50hz, so they can be simulated in the same config.
+
+The TDE waveforms last 139.2 ms (6960 rows) instead of 58.16 ms. Per axis,
+TDE50hz and TDE100hz have the same b-value and nearly the same centroid
+frequency as the LTE waveform (TDE50hz 47.6 Hz vs 47.3 Hz, TDE100hz 98.6 Hz
+vs 98.5 Hz), but the two blocks of each axis are further apart, which adds
+finer structure to the spectrum. TDE0hz encodes each axis in one continuous
+window instead (8.6 Hz vs 8.4 Hz for LTE0hz). Because of the longer duration, run them in their own simulation
 configs with a larger `n_t` (see the simulation configuration).
 
 **Rotations** (`rotations/*.txt`): one 3x3 rotation matrix per line, flattened
