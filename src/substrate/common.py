@@ -93,14 +93,15 @@ def load_params(description, required, defaults):
     return {**defaults, **config}, config_path
 
 
-def load_packing_params(description, required):
+def load_packing_params(description, required, optional=()):
     """
     Read and check the config of a random packing generator.
 
     `required` lists the keys the script needs besides the radius keys, which
-    depend on radius_distribution (see RADIUS_KEYS). Optional keys not in the
-    file take their value from PACKING_DEFAULTS. If no seed is given, a random
-    one is generated.
+    depend on radius_distribution (see RADIUS_KEYS). `optional` lists other
+    keys the script accepts (None if not in the file). Optional keys not in
+    the file take their value from PACKING_DEFAULTS. If no seed is given, a
+    random one is generated.
 
     Returns (params, config_path).
     """
@@ -115,12 +116,12 @@ def load_packing_params(description, required):
     all_radius_keys = [key for keys in RADIUS_KEYS.values() for key in keys]
     check_keys(config, config_path,
                required=list(required) + RADIUS_KEYS[distribution],
-               optional=list(PACKING_DEFAULTS) + all_radius_keys)
+               optional=list(PACKING_DEFAULTS) + all_radius_keys + list(optional))
 
     if distribution == "gamma" and config["radius_min"] >= config["radius_max"]:
         raise ValueError(f"{config_path}: radius_min must be smaller than radius_max")
 
-    params = {**PACKING_DEFAULTS, **config}
+    params = {**PACKING_DEFAULTS, **{key: None for key in optional}, **config}
 
     if params["seed"] is None:
         params["seed"] = int(np.random.default_rng().integers(2**32))
@@ -264,6 +265,7 @@ def tile_periodic(objects, centers, radii, domain_size, axes):
             origin[axis] = sign * half
             cut = slice_mesh_plane(cut, plane_normal=normal, plane_origin=origin, cap=False)
     tile = trimesh.util.concatenate(inside + [cut])
+    tile.merge_vertices()                         # the cuts leave duplicate vertices
 
     extent = tile.bounds
     if not np.allclose(extent, [[-half] * 3, [half] * 3], rtol=0, atol=1e-6 * domain_size):
@@ -341,18 +343,30 @@ def plot_mesh(mesh, path, title, equal_aspect=True, elev=None, azim=None):
     plt.close(fig)
 
 
-def plot_cross_section(centers, radii, domain_size, path, title):
-    """Save a 2D view of circles (e.g. a cylinder cross-section) with the placement domain."""
+def plot_cross_section(centers, radii, domain_size, path, title, periodic=False):
+    """
+    Save a 2D view of circles (e.g. a cylinder cross-section) with the placement
+    domain. With periodic=True, the circles are also drawn shifted by the domain
+    size, and the view is limited to the domain (the periodic tile).
+    """
     fig, ax = plt.subplots(figsize=(8, 8))
+    shifts = [-domain_size, 0, domain_size] if periodic else [0]
     for (x, y), r in zip(centers, radii):
-        ax.add_patch(plt.Circle((x, y), r, color="tab:blue"))
+        for dx in shifts:
+            for dy in shifts:
+                ax.add_patch(plt.Circle((x + dx, y + dy), r, color="tab:blue"))
 
     half = domain_size / 2
+    label = "Periodic tile" if periodic else "Placement domain"
     ax.add_patch(plt.Rectangle((-half, -half), domain_size, domain_size,
-                               fill=False, linestyle="--", color="black", label="Placement domain"))
+                               fill=False, linestyle="--", color="black", label=label))
 
     ax.set_aspect("equal")
-    ax.autoscale_view()
+    if periodic:
+        ax.set_xlim(-half, half)
+        ax.set_ylim(-half, half)
+    else:
+        ax.autoscale_view()
     ax.set_xlabel("X (µm)")
     ax.set_ylabel("Y (µm)")
     ax.set_title(title)

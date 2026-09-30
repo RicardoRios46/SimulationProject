@@ -177,8 +177,8 @@ Config parameters (all lengths in µm):
 | `radius_fixed`             | Radius of every object when `radius_distribution = "fixed"`          |
 | `max_attempts`             | *Optional.* Random positions tried per object before it is skipped (default 2000) |
 | `max_consecutive_failures` | *Optional.* Stop after this many objects in a row could not be placed (default 100) |
-| `cylinder_length`          | Cylinder length along z (`cylinders.py` only)                        |
-| `periodic`                 | *Optional.* Build a periodic tile (default `false`; `spheres.py` only for now, see below) |
+| `cylinder_length`          | Cylinder length along z (`cylinders.py` only, and only with `periodic = false`) |
+| `periodic`                 | *Optional.* Build a periodic tile (default `false`, see below)       |
 
 Objects are placed one at a time at random non-overlapping positions. When
 the domain fills up, some objects cannot be placed and are skipped, so fewer
@@ -204,6 +204,9 @@ With `periodic = true`, the substrate is a periodic tile of side
   the next tile
 - the bounding box of the mesh is then exactly the tile, which disimpy uses as
   the periodic voxel (checked; the script stops if no object crosses some face)
+- cylinders are open tubes cut at the z faces, so the tile is `domain_size`
+  long in z too and the cylinders are infinitely long; `cylinder_length` is
+  not used (it is an error to give it)
 
 The volume fraction is then exact (the objects fill the tile periodically),
 and the mesh is not watertight (it is open at the faces), as intended.
@@ -229,7 +232,7 @@ Each substrate from a config-file script is saved to `substrate/<name>/`:
 | `<name>_mesh.png`           | 3D preview (µm)                                                    |
 | `<name>_radii.png`          | Histogram of the placed radii (random packing only)               |
 | `<name>_cross_section.png`  | Top view of the cylinder packing (`cylinders.py` only)            |
-| `<name>_objects.csv`        | Object centers and radii in meters, in the frame of the mesh CSVs (`spheres.py` for now), e.g. to place walkers inside or outside the objects |
+| `<name>_objects.csv`        | Object centers (`x`, `y`, `z`; cylinders: axis at `x`, `y`, along z) and `radius`, in meters, in the frame of the mesh CSVs, e.g. to place walkers inside or outside the objects |
 
 `<name>_params.json` records everything needed to trace back or regenerate a
 substrate:
