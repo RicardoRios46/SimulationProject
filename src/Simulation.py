@@ -23,6 +23,7 @@ import time
 from datetime import datetime
 
 from numba import cuda
+from scipy.spatial import cKDTree
 
 #Run timing, saved in the metadata file
 started = datetime.now().isoformat(timespec="seconds")
@@ -135,7 +136,38 @@ def git_commit():
     except (OSError, subprocess.CalledProcessError):
         return None
 
-#Load substrate mesh
+#Sample n walker positions inside (intra=True) or outside the objects of the
+#substrate, from its objects file (centers and radii in meters, in the frame of
+#the mesh CSVs; cylinders have x, y only, with the axis along z). Exact and
+#fast, and correct for periodic substrates, where disimpy's own sampling is not
+#(its inside test does not wrap around the voxel). The positions are in
+#disimpy's frame: the mesh is shifted so the voxel corner is at the origin.
+def sample_positions(n, objects, vertices, intra, rng):
+    shift = -vertices.min(axis=0)
+    voxel_size = vertices.max(axis=0) + shift
+    dims = [i for i, axis in enumerate("xyz") if axis in objects]
+    centers = objects[["xyz"[i] for i in dims]].to_numpy() + shift[dims]
+    radii = objects["radius"].to_numpy()
+
+    positions = np.empty((0, 3))
+    while len(positions) < n:
+        candidates = rng.random((n, 3)) * voxel_size
+        if periodic:
+            tree = cKDTree(candidates[:, dims], boxsize=voxel_size[dims])
+            centers_in_box = np.mod(centers, voxel_size[dims])
+        else:
+            tree = cKDTree(candidates[:, dims])
+            centers_in_box = centers
+        inside = np.zeros(n, dtype=bool)
+        for center, r in zip(centers_in_box, radii):
+            inside[tree.query_ball_point(center, r)] = True
+        keep = inside if intra else ~inside
+        positions = np.vstack([positions, candidates[keep]])
+    return positions[:n]
+
+#Load substrate mesh. With position "intra" or "extra" and an objects file,
+#the initial positions are sampled from the objects (sample_positions);
+#otherwise disimpy samples them (e.g. old substrates without objects file)
 def get_substrate(meshName):
 
     print(meshName)
@@ -145,14 +177,22 @@ def get_substrate(meshName):
     vertices = data_verts.to_numpy()
     faces = data_faces.to_numpy()
 
+    objects_file = f'substrate/{meshName}/{meshName}_objects.csv'
+    objects = None
+    init_pos = position
+    if position in ("intra", "extra") and os.path.exists(objects_file):
+        objects = pd.read_csv(objects_file)
+        init_pos = sample_positions(int(n_walkers), objects, vertices, position == "intra", position_rng)
+        print(f"Sampled {len(init_pos)} {position} positions from {objects_file}")
+
     substrate = substrates.mesh(
         vertices,
         faces,
         periodic=periodic,
-        init_pos=position
+        init_pos=init_pos
     )
 
-    return substrate
+    return substrate, vertices, objects
 
 #Read gradient waveform from CSV
 def read_shape(filename):
@@ -187,8 +227,12 @@ if len(set(waveform_rows.values())) > 1:
         + ". Run waveforms with different durations in separate configs."
     )
 
+#Random generator for the initial positions sampled from the objects file
+position_rng = np.random.default_rng(seed)
+
 #Load substrate
-substrate = get_substrate(meshName)
+substrate, substrate_vertices, substrate_objects = get_substrate(meshName)
+init_pos_source = "objects file" if substrate_objects is not None else "disimpy"
 
 #All outputs of a config go in their own folder, outputs/<config_name>/
 output_dir = f"outputs/{config_name}"
@@ -313,6 +357,11 @@ if traj_enabled:
     #even when earlier runs of the same config had trajectories disabled.
     traj_file = f"{os.path.splitext(csv_filename)[0]}_traj.csv"
 
+    #Positions sampled from the objects file must match the number of walkers
+    if substrate_objects is not None:
+        substrate.init_pos = sample_positions(int(traj_n_walkers), substrate_objects,
+                                              substrate_vertices, position == "intra", position_rng)
+
     t_traj = time.perf_counter()
     trajSignal = simulations.simulation(
         n_walkers=int(traj_n_walkers),
@@ -338,6 +387,7 @@ run_info = {
     "slurm_partition": os.environ.get("SLURM_JOB_PARTITION"),
     "hostname": socket.gethostname(),
     "gpu": gpu_name.decode() if isinstance(gpu_name, bytes) else gpu_name,
+    "initial_positions": init_pos_source,
     "git_commit": git_commit(),
     "started": started,
     "time_setup_s": round(time_setup, 1),

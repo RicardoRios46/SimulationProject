@@ -215,15 +215,28 @@ Where things run:
   tasks and ~6.4-7.4 GB for two cylinder tasks, and 0.6% of the time. The
   defaults (`#SBATCH` in `batch/sbatch.sh` and `batch/array_sbatch.sh`) could
   be reduced, e.g. 1 CPU, 16 GB, 4 h, to not take cluster resources that are
-  not used. The user decided to wait: `intra` runs take much longer (the
-  initial positions inside the objects are computed first) and may need more
-  resources, so check them first (`seff <jobid>`, reportseff, or
+  not used. The user decided to wait: `intra` runs took much longer (disimpy
+  computed the initial positions inside the objects; now `Simulation.py`
+  samples them from the objects file in < 1 s, see Periodic boundaries), and
+  may need more resources, so check them first (`seff <jobid>`, reportseff, or
   `sacct -j <jobid> --format=JobID,MaxRSS,TotalCPU,Elapsed`). Memory also
   grows with walkers, gradients and n_t.
-- Periodic boundaries: `periodic = true` has had issues in the past, and the
-  goal is to make it work with the new substrates. Known cause to address:
-  packed objects near the domain edge extend past it and do not wrap around,
-  so the substrates are not proper periodic tiles.
+- Periodic boundaries (in progress, 2026-09-30). From the disimpy 0.3 code:
+  the periodic voxel is the bounding box of the mesh (+ padding); walkers
+  are never wrapped (correct phases) and see the geometry through periodic
+  subvoxels, so surfaces cut open at the voxel faces continue in the next
+  tile; but disimpy's `intra`/`extra` sampling (ray cast along +x) is not
+  periodic and misclassifies points in objects touching the +x face. Done:
+  `spheres.py`/`cylinders.py` with `periodic = true` build true periodic
+  tiles (`common.tile_periodic`: minimum-image placement, wrapped copies,
+  mesh cut open at the faces, bounding box = tile checked; cylinders are open
+  tubes with z period = domain_size, replacing the old long-cylinder hack),
+  and write `<name>_objects.csv`; `Simulation.py` samples `intra`/`extra`
+  positions from that file (periodic distances) for all substrates that have
+  it. Next: cluster tests (A3): a shift test (the same tile shifted must give
+  the same signal within noise), an intra test (trajectories never leave
+  their object across faces), free diffusion in an empty periodic box; then
+  CATERPillar objects and the templates to `periodic = true`.
 
 ### Substrates
 

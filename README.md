@@ -316,8 +316,8 @@ metadata JSON.
 | Key        | Description                                                              |
 |------------|--------------------------------------------------------------------------|
 | `name`     | Substrate folder name in `substrate/`                                    |
-| `periodic` | Treat the mesh as periodic (`true`/`false`)                              |
-| `position` | Initial walker positions, passed to disimpy `init_pos` (e.g. `"intra"`, `"extra"`) |
+| `periodic` | Treat the mesh as periodic (`true`/`false`). Use `true` only with substrates built with `periodic = true` (see Substrates) |
+| `position` | Initial walker positions: `"uniform"` (everywhere in the voxel), `"intra"` or `"extra"` (inside or outside the objects, see below) |
 
 `[simulation]`
 
@@ -344,6 +344,19 @@ metadata JSON.
 |-------------|----------------------------------------------------------|
 | `enabled`   | Run an additional small simulation that saves walker trajectories |
 | `n_walkers` | Number of walkers in the trajectory simulation (default `10`) |
+
+### Initial positions
+
+With `position = "intra"` or `"extra"` and a substrate that has an
+`<name>_objects.csv` file (all substrates from `spheres.py` and
+`cylinders.py`), `Simulation.py` samples the initial positions itself: points
+drawn uniformly in the voxel are kept if they are inside (or outside) a sphere,
+or a cylinder (distance to the axis in xy), with periodic distances for
+`periodic = true`. This is exact, takes well under a second for 100k walkers,
+and is correct for periodic substrates, where disimpy's own sampling is not
+(its inside test does not wrap around the voxel). Otherwise (e.g. older
+substrates, CATERPillar) disimpy samples them. The metadata `run` section
+records which was used (`initial_positions`).
 
 ### Input file formats
 
@@ -576,6 +589,7 @@ where and how the run was done, e.g. to compare run times:
 |-------------------------|--------------------------------------------------------------|
 | `slurm_job_id`, `slurm_array_job_id`, `slurm_array_task_id`, `slurm_partition` | SLURM job information (`null` outside SLURM or outside a job array) |
 | `hostname`, `gpu`       | Machine and GPU the simulation ran on                        |
+| `initial_positions`     | `"objects file"` (sampled by `Simulation.py`, see Initial positions) or `"disimpy"` |
 | `git_commit`            | Git commit of the project (`-dirty` if there were uncommitted changes) |
 | `started`               | Start date and time                                          |
 | `time_setup_s`          | Seconds to load the substrate and waveforms and build the gradients |
