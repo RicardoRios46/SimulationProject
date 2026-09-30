@@ -157,6 +157,34 @@ Where things run:
   (from `make_tde0hz_waveforms.py`, design `pgse_full`): 6960 rows,
   isotropic, 8.6 Hz on every axis. The TDEs must be simulated in their own
   configs (longer duration).
+- Periodic substrates (working, tested 2026-09-30): the substrate and
+  simulation templates use `periodic = true`. From the disimpy 0.3 code:
+  the periodic voxel is the bounding box of the mesh (+ padding); walkers
+  are never wrapped (correct phases) and see the geometry through periodic
+  subvoxels, so surfaces cut open at the voxel faces continue in the next
+  tile; disimpy's own `intra`/`extra` sampling (ray cast along +x) is not
+  periodic. So: `spheres.py`/`cylinders.py` with `periodic = true` build
+  true periodic tiles (`common.tile_periodic`: minimum-image placement,
+  wrapped copies, mesh cut open at the faces, bounding box = tile checked;
+  cylinders are open tubes with z period = domain_size, replacing the old
+  long-cylinder hack) and write `<name>_objects.csv`; `Simulation.py`
+  samples `intra`/`extra` positions from that file (periodic distances,
+  < 1 s for 100k walkers; metadata `run.initial_positions`). Use
+  `periodic = true` in the simulation only with `_periodic` substrates.
+  Cluster tests (job 210468, `sim_configs/pbc_*`, template tiles and copies
+  with every object shifted by (0.37, 0.61, 0.23) x the tile, 100k walkers,
+  n_t 10000): shifted vs original signals agree within the Monte Carlo
+  noise for uniform/intra/extra (max |dS| 0.0006-0.0021); uniform = volume-
+  fraction mix of intra and extra (within 0.002); 20 intra trajectories per
+  substrate never leave their object (max distance/radius 0.9997), incl.
+  walkers crossing the tile faces. Setup ~30 s (spheres), ~150 s (periodic
+  cylinders, 450k faces); intra/extra start as fast as uniform.
+  AD check (cylinders, D0 = 1 µm²/ms): the signal along the axis is free
+  diffusion with D0 in every compartment (direct fit of the rotation 5 deg
+  from z matches D0 cos^2 + RD sin^2 within 0.002 at 0/50/100 Hz); DKI AD
+  from `fit_tensor.py` is 0.99-1.00 at 50/100 Hz but 1.01 (intra, extra)
+  and 1.02 (uniform) at 0 Hz: a DKI model bias where the radial kurtosis is
+  large (intra K ~1.6), not a simulation error.
 - Shell scripts must keep LF line endings (enforced in `.gitattributes`).
 - `src/substrate/archive/` holds unmaintained beaded axon scripts kept for
   reference; don't update them unless asked.
@@ -171,12 +199,12 @@ Where things run:
   (e.g. the user asked to drop Windows line-ending handling in list files).
 - Test by running the scripts with pixi. Regression reference with the
   template configs (seed 123):
-  - `spheres.py`: 500 placed, volume_fraction 0.1726, radius_mean 3.347
-    (with `periodic = true`: 497 placed, volume_fraction 0.1613,
-    radius_mean 3.31)
-  - `cylinders.py`: 2840 of 3000 placed, area_fraction 0.3139, radius_mean 0.595
-    (with `periodic = true` and no `cylinder_length`: 2818 placed,
-    area_fraction 0.3039, radius_mean 0.5889)
+  - `spheres.py` (template, `periodic = true`): 497 placed, volume_fraction
+    0.1613, radius_mean 3.31 (with `periodic = false`: 500 placed, 0.1726,
+    3.347)
+  - `cylinders.py` (template, `periodic = true`, no `cylinder_length`): 2818
+    of 3000 placed, area_fraction 0.3039, radius_mean 0.5889 (with
+    `periodic = false` and `cylinder_length = 1000`: 2840, 0.3139, 0.595)
   - `caterpillar.py` (single_axon_run3.csv): 1 cell, 55 spheres, 1 volume
 
 ## Open work and known issues
@@ -221,22 +249,10 @@ Where things run:
   may need more resources, so check them first (`seff <jobid>`, reportseff, or
   `sacct -j <jobid> --format=JobID,MaxRSS,TotalCPU,Elapsed`). Memory also
   grows with walkers, gradients and n_t.
-- Periodic boundaries (in progress, 2026-09-30). From the disimpy 0.3 code:
-  the periodic voxel is the bounding box of the mesh (+ padding); walkers
-  are never wrapped (correct phases) and see the geometry through periodic
-  subvoxels, so surfaces cut open at the voxel faces continue in the next
-  tile; but disimpy's `intra`/`extra` sampling (ray cast along +x) is not
-  periodic and misclassifies points in objects touching the +x face. Done:
-  `spheres.py`/`cylinders.py` with `periodic = true` build true periodic
-  tiles (`common.tile_periodic`: minimum-image placement, wrapped copies,
-  mesh cut open at the faces, bounding box = tile checked; cylinders are open
-  tubes with z period = domain_size, replacing the old long-cylinder hack),
-  and write `<name>_objects.csv`; `Simulation.py` samples `intra`/`extra`
-  positions from that file (periodic distances) for all substrates that have
-  it. Next: cluster tests (A3): a shift test (the same tile shifted must give
-  the same signal within noise), an intra test (trajectories never leave
-  their object across faces), free diffusion in an empty periodic box; then
-  CATERPillar objects and the templates to `periodic = true`.
+- Periodic CATERPillar substrates: `caterpillar.py` has no `periodic`
+  option or objects file yet (its `intra`/`extra` runs fall back to
+  disimpy's sampling, which is fine only if non-periodic). Whether it can be
+  periodic depends on whether the CATERPillar output is a periodic tile.
 
 ### Substrates
 
@@ -250,8 +266,9 @@ Where things run:
   scripts used no seed, and they have the same boundary issue (objects past
   the domain edge). New work uses substrates from the current generators.
 - Create production-ready substrates (spheres, cylinders, CATERPillar) with
-  the current generators, once the periodic boundary work is done, to
-  replace the old ones in the simulations.
+  the current generators, to replace the old ones in the simulations. The
+  periodic boundary work is done for spheres and cylinders (see Periodic
+  substrates under Conventions); CATERPillar still needs it.
 - Denser sphere packing: the template spheres substrate has a volume fraction
   of only 0.17, so most of the signal (with `uniform` walkers) comes from the
   extra-cellular space. The user attributes the unstable order-3 fits of the

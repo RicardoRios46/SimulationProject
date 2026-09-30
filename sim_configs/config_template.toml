@@ -8,19 +8,19 @@
 # Name of the substrate mesh. Expects the files:
 #   substrate/<name>/<name>_vertices.csv
 #   substrate/<name>/<name>_faces.csv
-# This is the substrate made by src/substrate/spheres.py from
+# This is the periodic tile made by src/substrate/spheres.py from
 # substrate_configs/spheres_template.toml; cylinders_template.toml gives
-# "cylinders_2840_gamma_shape0p75_scale0p55_gap0p45".
-name = "spheres_500_gamma_shape2_scale1p5_gap1"
+# "cylinders_2818_gamma_shape0p75_scale0p55_gap0p45_periodic".
+name = "spheres_497_gamma_shape2_scale1p5_gap1_periodic"
 
-# Whether the substrate mesh is treated as periodic. false for now: the
-# packed substrates are not proper periodic tiles yet (objects near the edge
-# do not wrap around).
-periodic = false
+# Whether the substrate mesh is treated as periodic. true only for substrates
+# built with periodic = true (their names end in "_periodic"); false for the
+# others (the voxel boundaries are then impermeable walls).
+periodic = true
 
 # Initial walker position. Passed directly to disimpy's substrates.mesh(init_pos=...):
-# "uniform" (everywhere, fastest to start), "intra" or "extra" (inside or
-# outside the objects; the positions are computed first, which takes longer)
+# "uniform" (everywhere), "intra" or "extra" (inside or outside the objects;
+# sampled from the substrate's objects file, see README "Initial positions")
 position = "uniform"
 
 [simulation]

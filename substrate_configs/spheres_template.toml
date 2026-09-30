@@ -7,7 +7,7 @@
 
 # Optional: substrate name, used for the output folder substrate/<name>/.
 # If omitted, it is built from the parameters and the number of spheres
-# actually placed, e.g. spheres_500_gamma_shape2_scale1p5_gap1
+# actually placed, e.g. spheres_497_gamma_shape2_scale1p5_gap1_periodic
 # name = "my_spheres"
 
 # Optional: random seed. If omitted, a random seed is generated.
@@ -36,7 +36,7 @@ radius_max = 12
 # the faces of the cube, spheres crossing a face are wrapped to the opposite
 # side, and the mesh is cut at the faces, so the substrate repeats seamlessly
 # for simulations with periodic = true. The name gets "_periodic".
-# periodic = true
+periodic = true
 
 # --- Placement (optional, defaults shown) ---
 # Random positions tried per sphere before it is skipped

@@ -1,6 +1,6 @@
 [substrate]
-name = "spheres_500_gamma_shape2_scale1p5_gap1"
-periodic = false
+name = "spheres_497_gamma_shape2_scale1p5_gap1_periodic"
+periodic = true
 position = "uniform"
 
 [simulation]

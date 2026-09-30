@@ -7,7 +7,7 @@
 
 # Optional: substrate name, used for the output folder substrate/<name>/.
 # If omitted, it is built from the parameters and the number of cylinders
-# actually placed, e.g. cylinders_2840_gamma_shape0p75_scale0p55_gap0p45
+# actually placed, e.g. cylinders_2818_gamma_shape0p75_scale0p55_gap0p45_periodic
 # name = "my_cylinders"
 
 # Optional: random seed. If omitted, a random seed is generated.
@@ -18,14 +18,14 @@ seed = 123
 n_objects = 3000          # Number of cylinders to place
 domain_size = 120         # Side of the square (xy) the cylinder axes are placed in
 min_gap = 0.45            # Minimum gap between cylinder surfaces
-cylinder_length = 1000    # Length along z (only with periodic = false)
+# cylinder_length = 1000  # Length along z (only with periodic = false)
 
 # Optional: build a periodic tile (default false). Overlaps are checked across
 # the faces of the square, cylinders crossing a face are wrapped to the
 # opposite side, and the cylinders are open tubes cut at the z faces, so the
 # tile is domain_size in x, y and z and repeats seamlessly for simulations with
 # periodic = true. Remove cylinder_length when using it. The name gets "_periodic".
-# periodic = true
+periodic = true
 
 # --- Radius distribution: "gamma" or "fixed" ---
 radius_distribution = "gamma"

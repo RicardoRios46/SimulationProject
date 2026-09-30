@@ -178,7 +178,7 @@ Config parameters (all lengths in µm):
 | `max_attempts`             | *Optional.* Random positions tried per object before it is skipped (default 2000) |
 | `max_consecutive_failures` | *Optional.* Stop after this many objects in a row could not be placed (default 100) |
 | `cylinder_length`          | Cylinder length along z (`cylinders.py` only, and only with `periodic = false`) |
-| `periodic`                 | *Optional.* Build a periodic tile (default `false`, see below)       |
+| `periodic`                 | *Optional.* Build a periodic tile (default `false`, see below; the templates use `true`) |
 
 Objects are placed one at a time at random non-overlapping positions. When
 the domain fills up, some objects cannot be placed and are skipped, so fewer
