@@ -2,12 +2,15 @@
 # diffusion encoding) waveforms. See config_template.toml for all the options.
 # Copy this file, rename it (the filename, without extension, becomes the
 # basename used for all output files), and edit the values below.
+# The values are the settings of the test runs (see CLAUDE.md, Simulation
+# settings), with n_t scaled for the longer TDE waveforms.
 
 [substrate]
-# Name of the substrate mesh (substrate/<name>/<name>_vertices.csv, _faces.csv)
-name = "example_substrate"
-periodic = true
-position = "intra"
+# Name of the substrate mesh (substrate/<name>/<name>_vertices.csv, _faces.csv),
+# here the one made from substrate_configs/spheres_template.toml
+name = "spheres_500_gamma_shape2_scale1p5_gap1"
+periodic = false
+position = "uniform"
 
 [simulation]
 n_walkers = 100000
@@ -18,11 +21,12 @@ n_walkers = 100000
 # 139.2 ms / 5.8 us = ~24000.
 n_t = 24000
 
-diffusivity = 2e-9
+# Diffusivity, in m^2/s (1e-9 = 1 um^2/ms, ex vivo)
+diffusivity = 1e-9
 
 # Optional: fix the Monte Carlo seed for reproducibility (random if omitted,
 # recorded in the metadata either way).
-# seed = 42
+seed = 123
 
 [waveform]
 # TDE waveforms only: all waveforms in a config must have the same duration,
@@ -31,8 +35,8 @@ diffusivity = 2e-9
 waveform_file = ["TDE50hz.csv", "TDE100hz.csv"]
 
 # Rotation matrix file(s), relative to rotations/ (one file for all waveforms,
-# or one per waveform)
-rotation_file = "rotations_40.txt"
+# or one per waveform); the same rotations as the STE waveforms
+rotation_file = "ESRD2_0040.txt"
 
 # Target b-values (s/mm^2), 0-4500 in steps of 500 as in the test runs
 b_targets = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]

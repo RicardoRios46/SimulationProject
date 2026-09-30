@@ -1,21 +1,31 @@
 # Template configuration file for simulation.py
 # Copy this file, rename it (the filename, without extension, becomes the
 # basename used for all output files), and edit the values below.
+# The values are the settings of the test runs (see CLAUDE.md, Simulation
+# settings): template substrates, LTE 0/50/100 Hz and STE waveforms.
 
 [substrate]
 # Name of the substrate mesh. Expects the files:
 #   substrate/<name>/<name>_vertices.csv
 #   substrate/<name>/<name>_faces.csv
-name = "example_substrate"
+# This is the substrate made by src/substrate/spheres.py from
+# substrate_configs/spheres_template.toml; cylinders_template.toml gives
+# "cylinders_2840_gamma_shape0p75_scale0p55_gap0p45".
+name = "spheres_500_gamma_shape2_scale1p5_gap1"
 
-# Whether the substrate mesh is treated as periodic
-periodic = true
+# Whether the substrate mesh is treated as periodic. false for now: the
+# packed substrates are not proper periodic tiles yet (objects near the edge
+# do not wrap around).
+periodic = false
 
-# Initial walker position. Passed directly to disimpy's substrates.mesh(init_pos=...)
-position = "intra"
+# Initial walker position. Passed directly to disimpy's substrates.mesh(init_pos=...):
+# "uniform" (everywhere, fastest to start), "intra" or "extra" (inside or
+# outside the objects; the positions are computed first, which takes longer)
+position = "uniform"
 
 [simulation]
-# Number of random walkers for the main signal simulation
+# Number of random walkers for the main signal simulation. The Monte Carlo
+# noise scales as 1/sqrt(n_walkers) (see CLAUDE.md for the seed test).
 n_walkers = 100000
 
 # Number of simulation timesteps. The time step is the waveform duration / n_t,
@@ -25,13 +35,13 @@ n_walkers = 100000
 # (e.g. 24000 for the 139.2 ms TDE waveforms, see config_template_tde.toml).
 n_t = 10000
 
-# Diffusivity, in m^2/s
-diffusivity = 2e-9
+# Diffusivity, in m^2/s (1e-9 = 1 um^2/ms, ex vivo)
+diffusivity = 1e-9
 
 # Optional: fix the Monte Carlo seed for reproducibility.
 # If omitted, a random seed is generated each run (and recorded in the
 # output metadata JSON either way).
-# seed = 42
+seed = 123
 
 [waveform]
 # One or more gradient waveform files (x,y,z CSV, MATLAB format), relative to waveforms/
@@ -39,20 +49,29 @@ diffusivity = 2e-9
 # duration (number of rows): they are simulated with one time step, and a config
 # that mixes durations stops with an error.
 waveform_file = [
-    "pgse.csv",
-    "oscillating.csv",
+    "LTE0hz.csv",
+    "LTE50hz.csv",
+    "LTE100hz.csv",
+    "STEiso.csv",
+    "STEaniso.csv",
 ]
 
 # Rotation matrix file(s), relative to rotations/.
-# Either a single filename, applied to every waveform above:
-rotation_file = "rotations_20.txt"
+# Either a single filename, applied to every waveform above, e.g.
+# rotation_file = "fibRot40.txt"
 # ...or a list with exactly one file per waveform listed in waveform_file,
 # applied in the same order:
-# rotation_file = ["rotations_20.txt", "rotations_40.txt"]
+rotation_file = [
+    "fibRot40.txt",
+    "fibRot40.txt",
+    "fibRot40.txt",
+    "ESRD2_0040.txt",
+    "ESRD2_0040.txt",
+]
 
 # Target b-values (s/mm^2) to scale each waveform to. Must be non-negative;
 # a value of 0 is written directly with signal = 1.0 (no simulation needed).
-b_targets = [0, 500, 1000, 2000, 3000]
+b_targets = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
 
 # Optional: sampling time step (ms) that the waveform CSV files were
 # generated at (e.g. each row = 0.02 ms of the pulse sequence).
@@ -67,7 +86,7 @@ b_targets = [0, 500, 1000, 2000, 3000]
 [trajectory]
 # Optional block. If omitted entirely, trajectory output is disabled.
 # Set enabled = true to additionally run a small trajectory simulation
-# and write outputs/<config_name>_traj.csv
+# and write outputs/<config>/<config>_traj.csv
 enabled = false
 
 # Number of walkers to track in the trajectory simulation (only used if enabled = true)

@@ -1,21 +1,18 @@
 [substrate]
-name = "example_substrate"
-periodic = true
-position = "intra"
+name = "spheres_500_gamma_shape2_scale1p5_gap1"
+periodic = false
+position = "uniform"
 
 [simulation]
 n_walkers = 100000
 n_t = 10000
-diffusivity = 2e-9
+diffusivity = 1e-9
+seed = 123
 
 [waveform]
-waveform_file = ["pgse.csv", "oscillating.csv"]
-
-
-rotation_file = "rotations_20.txt"
-# rotation_file = ["rotations_20.txt", "rotations_40.txt"]
-
-b_targets = [0, 500, 1000, 2000, 3000]
+waveform_file = ["LTE0hz.csv", "LTE50hz.csv", "LTE100hz.csv", "STEiso.csv", "STEaniso.csv"]
+rotation_file = ["fibRot40.txt", "fibRot40.txt", "fibRot40.txt", "ESRD2_0040.txt", "ESRD2_0040.txt"]
+b_targets = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
 
 # Optional. 0.02 ms (20 us) if omitted.
 # raster_time_ms = 0.02
