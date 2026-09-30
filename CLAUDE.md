@@ -199,12 +199,12 @@ Where things run:
   (e.g. the user asked to drop Windows line-ending handling in list files).
 - Test by running the scripts with pixi. Regression reference with the
   template configs (seed 123):
-  - `spheres.py` (template, `periodic = true`): 497 placed, volume_fraction
-    0.1613, radius_mean 3.31 (with `periodic = false`: 500 placed, 0.1726,
-    3.347)
-  - `cylinders.py` (template, `periodic = true`, no `cylinder_length`): 2818
-    of 3000 placed, area_fraction 0.3039, radius_mean 0.5889 (with
-    `periodic = false` and `cylinder_length = 1000`: 2840, 0.3139, 0.595)
+  - `spheres.py` (template: 150 µm tile, 480 spheres, gamma 5.76/1.04 µm,
+    radii 2-12 µm, gap 1 µm, periodic): 479 placed, volume_fraction 0.1802,
+    radius_mean 5.981
+  - `cylinders.py` (template: 60 µm tile, 2400 cylinders, gamma 5.44/0.0643
+    µm, radii 0.1-1.5 µm, gap 0.1 µm, periodic): 2395 placed, area_fraction
+    0.3006, radius_mean 0.3511
   - `caterpillar.py` (single_axon_run3.csv): 1 cell, 55 spheres, 1 volume
 
 ## Open work and known issues
@@ -290,8 +290,14 @@ Where things run:
   spheres-only substrate the meaningful simulation is `intra` (soma);
   `extra`/`uniform` are dominated by nearly free extra-cellular water,
   whereas in tissue that space is mostly neuropil. Move the soma radii
-  towards mouse values and the axon radii to a smaller mean (values to be
-  set). Template values before this: spheres gamma shape 2, scale 1.5 µm
+  towards mouse values and the axon radii to a smaller mean. Chosen
+  (templates since 2026-09-30): spheres mean r ~6 µm, SD ~2.2 (gamma 5.76 /
+  1.04 µm, 2-12 µm), 480 in a 150 µm tile -> volume fraction 0.18;
+  cylinders mean r ~0.35 µm, SD ~0.14 (gamma 5.44 / 0.0643 µm, 0.1-1.5 µm,
+  diameter ~0.7 µm), 2400 in a 60 µm tile with gap 0.1 µm -> area fraction
+  0.30 (kept in the plausible intra-axonal range; revisit with myelin). A
+  gap of 0.45 µm (the old value, larger than the new mean radius) reached
+  only 0.22 and skipped large axons. Template values before this: spheres gamma shape 2, scale 1.5 µm
   (mean r ~3.3 µm); cylinders shape 0.75, scale 0.55 µm (mean r ~0.59 µm).
   Packing scan for the record (placement only, 100 µm periodic tile,
   spheres template radii, 4000 drawn): in drawn order 0.31 (gap 1),
@@ -302,7 +308,8 @@ Where things run:
 - Myelin (future): the cylinders have no myelin (all space outside is free
   water). Later, myelinated axons could be modelled as an excluded ring
   between an inner (axon) and outer (fibre) radius, g-ratio ~0.6-0.7, with
-  both radii in the objects file.
+  both radii in the objects file. Revisit the intra-axonal area fraction
+  (0.30 now) then.
 - CATERPillar (when starting the CATERPillar simulations): look at
   https://github.com/Mic-map/CATERPillar and draft a config.json matching
   the literature values above (see its example_config.json). It can

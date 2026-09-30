@@ -7,7 +7,7 @@
 
 # Optional: substrate name, used for the output folder substrate/<name>/.
 # If omitted, it is built from the parameters and the number of spheres
-# actually placed, e.g. spheres_497_gamma_shape2_scale1p5_gap1_periodic
+# actually placed, e.g. spheres_479_gamma_shape5p76_scale1p04_gap1_periodic
 # name = "my_spheres"
 
 # Optional: random seed. If omitted, a random seed is generated.
@@ -15,8 +15,8 @@
 seed = 123
 
 # --- Geometry ---
-n_objects = 500           # Number of spheres to place
-domain_size = 100         # Side of the cube the sphere centers are placed in
+n_objects = 480           # Number of spheres to place (~0.18 volume fraction, soma in gray matter)
+domain_size = 150         # Side of the cube the sphere centers are placed in (the periodic tile)
 min_gap = 1.0             # Minimum gap between sphere surfaces
 
 # --- Radius distribution: "gamma" or "fixed" ---
@@ -24,9 +24,11 @@ radius_distribution = "gamma"
 
 # Used when radius_distribution = "gamma". Radii outside
 # [radius_min, radius_max] are redrawn (truncated gamma).
-gamma_shape = 2
-gamma_scale = 1.5
-radius_min = 1
+# Soma radii towards mouse values (mean ~6 µm, SD ~2.2 µm, glia to pyramidal
+# neurons, see CLAUDE.md "Realistic substrates")
+gamma_shape = 5.76
+gamma_scale = 1.04
+radius_min = 2
 radius_max = 12
 
 # Used when radius_distribution = "fixed": every sphere has this radius.

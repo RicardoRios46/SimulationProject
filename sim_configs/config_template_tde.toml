@@ -8,7 +8,7 @@
 [substrate]
 # Name of the substrate mesh (substrate/<name>/<name>_vertices.csv, _faces.csv),
 # here the periodic tile made from substrate_configs/spheres_template.toml
-name = "spheres_497_gamma_shape2_scale1p5_gap1_periodic"
+name = "spheres_479_gamma_shape5p76_scale1p04_gap1_periodic"
 periodic = true
 position = "uniform"
 

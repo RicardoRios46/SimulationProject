@@ -7,7 +7,7 @@
 
 # Optional: substrate name, used for the output folder substrate/<name>/.
 # If omitted, it is built from the parameters and the number of cylinders
-# actually placed, e.g. cylinders_2818_gamma_shape0p75_scale0p55_gap0p45_periodic
+# actually placed, e.g. cylinders_2395_gamma_shape5p44_scale0p0643_gap0p1_periodic
 # name = "my_cylinders"
 
 # Optional: random seed. If omitted, a random seed is generated.
@@ -15,9 +15,9 @@
 seed = 123
 
 # --- Geometry ---
-n_objects = 3000          # Number of cylinders to place
-domain_size = 120         # Side of the square (xy) the cylinder axes are placed in
-min_gap = 0.45            # Minimum gap between cylinder surfaces
+n_objects = 2400          # Number of cylinders to place (~0.30 area fraction)
+domain_size = 60          # Side of the square (xy) the cylinder axes are placed in (the periodic tile)
+min_gap = 0.1             # Minimum gap between cylinder surfaces
 # cylinder_length = 1000  # Length along z (only with periodic = false)
 
 # Optional: build a periodic tile (default false). Overlaps are checked across
@@ -32,10 +32,12 @@ radius_distribution = "gamma"
 
 # Used when radius_distribution = "gamma". Radii outside
 # [radius_min, radius_max] are redrawn (truncated gamma).
-gamma_shape = 0.75
-gamma_scale = 0.55
-radius_min = 0.2
-radius_max = 3
+# Axon (inner) radii towards mouse corpus callosum values (mean ~0.35 µm,
+# SD ~0.14 µm, diameter ~0.7 µm, see CLAUDE.md "Realistic substrates")
+gamma_shape = 5.44
+gamma_scale = 0.0643
+radius_min = 0.1
+radius_max = 1.5
 
 # Used when radius_distribution = "fixed": every cylinder has this radius.
 # radius_fixed = 0.5
