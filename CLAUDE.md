@@ -182,9 +182,15 @@ Where things run:
 - TDE vs STE and LTE: in the first TDE test (see Simulation settings)
   TDE50hz matched STEiso within the noise (same 47.6 Hz centroid, 139.2 vs
   58.16 ms), so the diffusion time difference did not show in D, K, V; one
-  seed only, check with more seeds before relying on it. A combined analysis
-  of several runs (LTE and TDE per frequency, e.g. V_LTE - V_STE towards
-  V_iso) is not written yet: each run is analysed separately.
+  seed only, check with more seeds before relying on it.
+- Combined analysis across runs (planned): each run is analysed separately
+  now. Needed: combine the results of the LTE/STE runs (LTE0/50/100, STEiso,
+  STEaniso; 58.16 ms) and the TDE runs (TDE0/50/100; 139.2 ms, their own
+  configs) per frequency, e.g. V_LTE - V_STE towards V_iso, including both
+  STEiso and STEaniso. Simulate them with the `intra`, `extra` and `uniform`
+  walker positions. Order (user's decision): first make the substrates
+  production ready (see Substrates), then these simulations and the
+  combined analysis.
 
 - Update `disimpy-env` so simulations can also run on the local Windows
   workstation (RTX 5060, compute capability 12.0). Likely needs a newer
