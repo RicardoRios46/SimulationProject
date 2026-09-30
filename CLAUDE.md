@@ -265,7 +265,15 @@ Where things run:
   samples them from the objects file in < 1 s, see Periodic boundaries), and
   may need more resources, so check them first (`seff <jobid>`, reportseff, or
   `sacct -j <jobid> --format=JobID,MaxRSS,TotalCPU,Elapsed`). Memory also
-  grows with walkers, gradients and n_t.
+  grows with walkers, gradients and n_t. Host memory peak at the end of a
+  run: disimpy copies all phases (gradients x walkers, float64) to the CPU
+  and computes exp(1j * phases) over the whole array, so the peak is ~5x
+  the phase array: 1800 gradients x 1M walkers ~72 GB, 1080 x 1M ~43 GB.
+  The V_iso run (2026-09-30, `sim_configs/viso_*`, 1M walkers) was
+  submitted with --mem=96G; check its real use (seff) before choosing
+  defaults. If nodes cannot give that much, Simulation.py could run the
+  walkers in chunks (e.g. 4 x 250k with different seeds) and sum the
+  signals.
 - Periodic CATERPillar substrates: `caterpillar.py` has no `periodic`
   option or objects file yet (its `intra`/`extra` runs fall back to
   disimpy's sampling, which is fine only if non-periodic). Whether it can be
