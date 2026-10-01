@@ -391,13 +391,12 @@ Where things run:
   2025.06.20.660694). STATUS (2026-09-30, paused to run the V_iso
   simulations; resume here): done: findings below, folder layout and
   `caterpillar.py` taking the CSV + options (commit 4ac1700), cylinders using
-  CATERPillar's validated axon radii. Next: (1) the JSON templates
+  CATERPillar's validated axon radii, JSON templates
   `substrate_configs/caterpillar/wm_mouse_template.json` and
-  `gm_mouse_template.json` with the values in the plan below (WM needs the
-  user's decision on the myelinated/unmyelinated fractions first); (2) the
-  converter work listed below (objects file with both-surface myelin, then
-  the central start region); (3) a first small run (50 µm voxel) to check
-  CATERPillar's run time and the mesh size.
+  `gm_mouse_template.json` (2026-10-01; keys checked against the code).
+  Next: (1) the converter work listed below (objects file with both-surface
+  myelin, then the central start region); (2) a first small run (WM, 50 µm
+  voxel) to check CATERPillar's run time and the mesh size.
   Findings from its code and paper (2026-09-30):
   - Config (JSON, run as `./CATERPillar --config <file>.json`): `Alpha`,
     `Beta` are a gamma of the INNER axon radius (µm; the code adds pi r^2 to
@@ -420,11 +419,32 @@ Where things run:
     Z inner_radius outer_radius, µm) and `_growth_info.txt`. Not periodic:
     the authors extended MC/DC with mirror boundaries and started walkers
     in a central region 30 µm from the edges.
-  - Fractions (open, user's decision): Lee et al. give none (they
-    segmented only myelinated axons, 36 x 48 x 20 µm, genu). Reports of
-    the myelinated share of mouse corpus callosum axons differ (e.g. ~90%
-    of fibres in a recent EM study vs ~30% by count in older studies);
-    check before fixing AxonsWithMyelinICVF / AxonsICVF.
+  - WM fractions (user's decision, 2026-10-01): AxonsWithMyelinICVF 55,
+    AxonsICVF 9 (total ~64%). Sources: Papazoglou et al. 2024, NMR Biomed
+    (PMC11475374): EM of ex-vivo perfusion-fixed mouse corpus callosum and
+    fornix, myelinated (inner) axon volume fraction ~0.35 in controls,
+    unmyelinated ~30-33% of the axon volume, citing Jelescu et al. 2016
+    NeuroImage 132 (mouse, 30%) and Abdollahzadeh et al. 2019 Sci Rep
+    (PMC6465365; SBEM of rat corpus callosum, 33%), so total axonal ~0.5.
+    With Lee et al.'s myelin thickness (g ~0.56-0.62 for our radii) the
+    fibre volume is ~2.6x the inner volume, so inner 0.35 + 0.15
+    unmyelinated would exceed 100% (real tissue probably has a larger
+    aggregate g ~0.7), and CATERPillar reaches ~70% in practice: the
+    templates keep the ~30% unmyelinated proportion and Lee's g-ratio and
+    scale the total (inner ~0.21 + myelin ~0.34 + unmyelinated 0.09;
+    extra-axonal ~36%, above the < 5-15% of fixed tissue; accepted, the
+    substrate need not be exactly realistic). The "~90% myelinated" figure
+    found earlier comes from Riise & Pakkenberg 2011, a HUMAN corpus
+    callosum study: not used. CATERPillar draws unmyelinated axons from the
+    same radius gamma (real ones are thinner, ~0.2-0.3 µm diameter).
+  - GM template (approximation): voxel 100 µm, unmyelinated axons 25%
+    (FODF_c2 0.33, alpha 4, beta 0.06 µm, MinRadius 0.15), glia pop 1 as
+    neuron somas (r 6.4 +- 1.5 µm, soma 10%, processes as dendrites 20%,
+    length 40 +- 10 µm, 6 primary), pop 2 protoplasmic astrocytes (r 4 +-
+    0.5 µm, soma 2%, processes 5%, length 25 +- 5 µm); total ~62%. WM
+    template glia: fibrous astrocytes (pop 1, soma 1%, processes 2%, r 4.5
+    +- 0.5 µm, length 25 +- 5 µm); pop 2 off. Glia process lengths and
+    numbers are rough choices, not from a specific source.
   - Plan: two configs for ex-vivo mouse, WM (corpus callosum: alpha 4,
     beta 0.12, MinRadius 0.15, K1-K3 of Lee, FODF_c2 ~0.9 for the ~18 deg
     dispersion of Lee, epsilon 0.4, beading 0.3, ~60% total ICVF, small

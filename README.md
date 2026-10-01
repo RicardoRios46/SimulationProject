@@ -283,15 +283,29 @@ substrate/caterpillar_<run>/
 └── caterpillar_<run>_vertices.csv, ...   # the converted substrate (as for spheres/cylinders)
 ```
 
-1. Copy a config to `substrate_configs/caterpillar/<run>.json` and set
-   `"Filename": "<run>"` and `"OutputDirectory": "substrate/caterpillar_<run>/caterpillar"`
-   (copy the JSON into that folder too, to keep it with the substrate).
+1. Copy a template to `substrate_configs/caterpillar/<run>.json` and replace
+   `RUN_NAME` with `<run>` in `"Filename"` and `"OutputDirectory"`
+   (`substrate/caterpillar_<run>/caterpillar`; copy the JSON into that folder
+   too, to keep it with the substrate).
 2. Run CATERPillar: `./CATERPillar --config substrate_configs/caterpillar/<run>.json`
 3. Convert:
 
 ```bash
 pixi run -e trimesh-env python src/substrate/caterpillar.py substrate/caterpillar_<run>/caterpillar/<run>.csv
 ```
+
+Templates (ex-vivo mouse; not meant to be exactly realistic, but anchored
+to published values):
+
+| Template                  | Content |
+|---------------------------|---------|
+| `wm_mouse_template.json`  | White matter (corpus callosum), 50 µm voxel: myelinated axons 55% (incl. myelin) + unmyelinated 9% (~30% of the axon volume), inner radius gamma α 4, β 0.12 µm, min 0.15 µm (CATERPillar's fit to Lee et al. 2019), myelin thickness K1-K3 of Lee et al., FODF_c2 0.9 (~18° dispersion), tortuosity 0.4, beading 0.3, fibrous astrocytes (soma 1%, processes 2%, r 4.5 µm) |
+| `gm_mouse_template.json`  | Gray matter (cortex), approximation, 100 µm voxel: dispersed unmyelinated axons 25% (FODF_c2 0.33, β 0.06 µm), glia population 1 standing in for neuron somas (r 6.4 ± 1.5 µm, 10%) with processes as dendrites (20%), population 2 protoplasmic astrocytes (r 4 µm, soma 2%, processes 5%) |
+
+The sources and reasoning are in CLAUDE.md (CATERPillar notes). Note that
+CATERPillar's own `example_config.json` uses the key `OndulationFactor`,
+which the code ignores (it reads `UndulationFactor`); the templates use the
+right key.
 
 A CSV given from another place is copied into `substrate/<name>/caterpillar/`,
 with its `<run>.json` and `<run>_growth_info.txt` if they are next to it.
