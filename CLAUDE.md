@@ -179,6 +179,24 @@ Where things run:
   of the STE fits, mainly the TDE series, also showing STEiso and STEaniso
   (mixed frequency); V_aniso(f) = V_LTE(f) - V_STE(f); cumulant order 3
   (whether the order matters is a sub-objective, to be reported).
+  `src/fit_viso.py` results (2026-10-01, `graphOutputs/viso/<substrate>_
+  <position>_order<2|3>/`): the order matters: cylinders intra V_aniso
+  0.084 (order 3) vs 0.049 (order 2), spheres intra V_iso at 47.6 Hz 0.0107
+  vs 0.0214, cylinders uniform V_iso 0.066 vs 0.058. Order 3: cylinders
+  intra V_iso ~0.001, V_aniso ~0.084 flat in frequency; cylinders uniform
+  V_iso ~0.066, V_aniso ~0.06, flat; spheres intra V_iso 0.015 / 0.011 /
+  0.004 at 8.6 / 47.6 / 98.6 Hz, V_aniso within +-0.004 of 0 (noise and
+  model error; should be 0 for spheres). STEaniso - STEiso: ~0 for the
+  cylinders (no frequency dependence across 8-99 Hz); spheres D -0.12
+  (intra), V +0.010 (uniform, both orders; possibly the different
+  diffusivities per axis acting as variance), intra -0.003 (order 3) /
+  -0.010 (order 2), extra +-0.005 (sign changes with order: noise).
+  Each value is from one run (one seed): no error bars yet.
+- Uncertainty (later): repeat the V_iso configs with several seeds to get
+  mean +- SD per point (and on the order comparison and STEaniso - STEiso).
+  Feasible as an overnight run (set A ~25-30 min, TDE ~40-60 min per config
+  at 1M walkers, 12 configs per seed, 14 GPUs on hx); the user decided the
+  single-seed results are good enough for now (2026-10-01).
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
