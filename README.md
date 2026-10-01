@@ -639,7 +639,7 @@ tensor (DKI) fit, plus a trajectory plot. Each takes the signal file and can
 be run on its own:
 
 ```bash
-pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal_file>.csv [--order 3] [--fix-intercept]
+pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal_file>.csv [--order 2] [--fix-intercept]
 pixi run -e dipy-env python src/fit_tensor.py outputs/<config>/<signal_file>.csv
 pixi run -e dipy-env python src/plot_trajectories.py outputs/<config>/<signal_file>.csv
 ```
@@ -673,15 +673,16 @@ easily.
 
 ### Powder average: `fit_powder_average.py`
 
-- Powder averaging of the signal over rotations, and a plot of the signal decay
-- Cumulant fit of the log-signal decay of each waveform (b in ms/µm²), 2nd
-  order by default: log S = C + B b + A b², giving D = −B, V = 2A and kurtosis
-  K = 3V/D². With `--order 3`, the b³ term is added
-  (log S = C + B b + A b² + E b³), giving also the third cumulant k3 = −6E
-  (µm⁶/ms³) and the skewness k3/V^(3/2) (not defined for V ≤ 0, and very
-  large when V is close to 0). The intercept C is fitted, or fixed at 0
+- Powder averaging of the signal over rotations
+- Cumulant fit of the log-signal decay of each waveform (b in ms/µm²), 3rd
+  order by default: log S = C + B b + A b² + E b³, giving D = −B, V = 2A,
+  kurtosis K = 3V/D², the third cumulant k3 = −6E (µm⁶/ms³) and the skewness
+  k3/V^(3/2) (not defined for V ≤ 0, and very large when V is close to 0).
+  `--order 2` drops the b³ term (it biases D, K and V where the kurtosis is
+  large, e.g. intra-axonal LTE). The intercept C is fitted, or fixed at 0
   (S = 1 at b = 0) with `--fix-intercept`. The fitted curves are plotted with
-  the data
+  the data, with D, K, V and k3 in the legend (the skewness is only in the
+  CSV)
 - Frequency dependence of D, K and V for each encoding, with one panel per
   encoding (LTE, STE). Encodings with fewer than three waveforms are plotted
   without model fits
@@ -729,7 +730,6 @@ again with other options to compare.
 | `powder_average_signal.csv`          | `fit_powder_average.py` | Powder-averaged signal per waveform and b-value |
 | `powder_average_fit.csv`             | `fit_powder_average.py` | Per waveform: encoding, centroid frequency (Hz), fit order, fixed intercept or not, coefficients C, B, A, E, D, kurtosis and variance (and k3, skewness with `--order 3`) |
 | `powder_average_frequency_fit.csv`   | `fit_powder_average.py` | Frequency-dependence models of D, K, V per encoding: slope, intercept, error, best |
-| `signal_<signal_file>.svg`           | `fit_powder_average.py` | Signal decay |
 | `signal_fit_<signal_file>.svg`       | `fit_powder_average.py` | Signal decay with the fits |
 | `Diffusivity_/Kurtosis_/Variance_<signal_file>.svg` | `fit_powder_average.py` | Frequency dependence of D, K, V (LTE and STE panels) |
 | `tensor_fit.csv`                     | `fit_tensor.py`         | Per LTE waveform: centroid frequency (Hz), FA, MD, AD, RD |

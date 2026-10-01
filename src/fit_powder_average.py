@@ -10,8 +10,8 @@ b-tensor shape, and the frequency as the centroid frequency of the dephasing
 spectrum |Q(f)|^2.
 
 Cumulant fit of log(signal), b in ms/µm²:
-    order 2 (default):  log S = C + B b + A b^2
-    order 3:            log S = C + B b + A b^2 + E b^3
+    order 2:            log S = C + B b + A b^2
+    order 3 (default):  log S = C + B b + A b^2 + E b^3
     D = -B, V = 2A, K = 3V/D², k3 = -6E, skewness = k3 / V^(3/2)
 C is fitted, or fixed at 0 (S = 1 at b = 0) with --fix-intercept.
 
@@ -26,12 +26,11 @@ Outputs in graphOutputs/<signal>/ (overwritten by each run, whatever the options
                                         coefficients C, B, A, E, D, kurtosis, variance
                                         (and k3, skewness for order 3)
     powder_average_frequency_fit.csv    Frequency-dependence models per encoding and parameter
-    signal_<signal>.svg                 Signal decay (data only)
-    signal_fit_<signal>.svg             Signal decay with the fits
+    signal_fit_<signal>.svg             Signal decay with the fits (D, K, V and, for order 3, k3)
     Diffusivity_/Kurtosis_/Variance_<signal>.svg   Frequency dependence of D, K, V
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal>.csv [--order 3] [--fix-intercept]
+    pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal>.csv [--order 2] [--fix-intercept]
 """
 
 import argparse
@@ -45,8 +44,8 @@ from analysis_utils import (output_dir, load_signals, powder_average, waveform_i
 
 parser = argparse.ArgumentParser(description="Powder-average the signal and fit it (D, K, V).")
 parser.add_argument("signals", help="Signal CSV written by Simulation.py")
-parser.add_argument("--order", type=int, choices=[2, 3], default=2,
-                    help="Order of the polynomial in b fitted to log(signal) (default 2)")
+parser.add_argument("--order", type=int, choices=[2, 3], default=3,
+                    help="Order of the polynomial in b fitted to log(signal) (default 3)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
 args = parser.parse_args()
@@ -95,40 +94,34 @@ for wf in waveforms:
     fit_rows.append(row)
 pd.DataFrame(fit_rows).to_csv(f"{output}/powder_average_fit.csv", index=False)
 
-#Signal decay plots: data only, and data with the fitted curves
+#Signal decay with the fitted curves (order 3 shows k3; the skewness, which
+#blows up when V ~ 0, is only in the CSV)
 x_fit = np.linspace(0, max(df['bval']) / 1000, 100)
+fig, ax = plt.subplots(figsize=(9, 5))
 
-for with_fits in [False, True]:
-    fig, ax = plt.subplots(figsize=(9, 5))
+for wf in waveforms:
+    wf_data = df_averaged.loc[wf]
+    b_arr = np.array(wf_data.index) / 1000
+    label_name = info[wf]["label"]
 
-    for wf in waveforms:
-        wf_data = df_averaged.loc[wf]
-        b_arr = np.array(wf_data.index) / 1000
-        label_name = info[wf]["label"]
+    fit = fits[wf]
+    y_fit = np.exp(np.polyval([fit["E"], fit["A"], fit["B"], fit["C"]], x_fit))
+    fit_label = f"D: {fit['D']:.4f} µm²/ms\nK: {fit['K']:.4f}\nV: {fit['V']:.4f} µm⁴/ms²"
+    if args.order == 3:
+        fit_label += f"\nk3: {fit['k3']:.4f} µm⁶/ms³"
+    ax.scatter(b_arr, wf_data.values, marker='o', label=rf"$\bf{{{label_name}\ Data}}$")
+    ax.plot(x_fit, y_fit, linestyle='--', label=fit_label)
 
-        if not with_fits:
-            ax.plot(b_arr, wf_data.values, marker='o', label=label_name)
-            continue
+ax.set_yscale('log')
+ax.set_xlabel("b-value (ms/µm²)")
+ax.set_ylabel("Normalized Signal ($S/S_0$)")
+ax.set_title(f"Signal Decay (order {args.order} fit, intercept {intercept})")
+ax.grid(True, which="both", linestyle='--', alpha=0.5)
+ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1))
 
-        fit = fits[wf]
-        y_fit = np.exp(np.polyval([fit["E"], fit["A"], fit["B"], fit["C"]], x_fit))
-        fit_label = f"D: {fit['D']:.4f} µm²/ms\nK: {fit['K']:.4f}\nV: {fit['V']:.4f} µm⁴/ms²"
-        if args.order == 3:
-            fit_label += f"\nk3: {fit['k3']:.4f} µm⁶/ms³\nSkewness: {fit['skewness']:.3f}"
-        ax.scatter(b_arr, wf_data.values, marker='o', label=rf"$\bf{{{label_name}\ Data}}$")
-        ax.plot(x_fit, y_fit, linestyle='--', label=fit_label)
-
-    ax.set_yscale('log')
-    ax.set_xlabel("b-value (ms/µm²)")
-    ax.set_ylabel("Normalized Signal ($S/S_0$)")
-    ax.set_title(f"Signal Decay (order {args.order} fit, intercept {intercept})" if with_fits else "Signal Decay")
-    ax.grid(True, which="both", linestyle='--', alpha=0.5)
-    ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1))
-
-    plt.subplots_adjust(right=0.7)
-    plot_file = f"{output}/signal_fit_{name}.svg" if with_fits else f"{output}/signal_{name}.svg"
-    plt.savefig(plot_file, dpi=300, bbox_inches='tight')
-    plt.close(fig)
+plt.subplots_adjust(right=0.7)
+plt.savefig(f"{output}/signal_fit_{name}.svg", dpi=300, bbox_inches='tight')
+plt.close(fig)
 
 #Frequency dependence of D, K and V, one panel per encoding
 encodings = ["LTE", "STE"]
