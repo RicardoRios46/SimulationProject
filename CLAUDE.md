@@ -156,6 +156,29 @@ Where things run:
     cylinders 0.0556 vs 0.0555 +- 0.0010). Spheres: STE ~ LTE at 50/100 Hz
     (no microscopic anisotropy); TDE0hz V 0.1135 vs LTE0hz 0.1212 +- 0.0015.
     Cylinders: STE V ~0.054 at every frequency vs LTE ~0.11.
+- V_iso production run (2026-09-30, job 210518, `sim_configs/viso_*`,
+  outputs `outputs/viso_<substrate>_<lte_ste|tde>_<position>/`): template
+  substrates (spheres_479..., cylinders_1198..., periodic), set A = LTE0/50/100
+  + STEiso + STEaniso (n_t 20000), set B = TDE0/50/100 (n_t 48000),
+  intra/extra/uniform, 1M walkers, 10 b-values, seeds 1001-1012, --mem=128G.
+  Simulation time: set A 25-29 min, TDE 38-61 min (cylinders slower);
+  1M walkers ran ~2.7x faster per walker than 100k (set A ~7.5 s per 1000
+  steps per 100k walkers vs ~23 s at 100k: larger batches use the GPU
+  better), so the 100k timing formula overestimates large runs. Memory
+  peak (reportseff MemEff x 128 GB): set A 62-71 GB, TDE 28-39 GB (~5x the
+  phase array, as estimated). Order-2 fits (all b) per compartment: spheres
+  intra STE ~ LTE at each frequency (isotropic); cylinders intra V_STE
+  ~0.0005 vs V_LTE ~0.049 (all anisotropic); cylinders uniform V_STE
+  ~0.058 at every frequency (~two-compartment mixing f(1-f)(dD)^2);
+  STEaniso behaves like the average of its axes (spheres intra D 0.650 vs
+  LTE mean 0.646); TDE50 vs STEiso at 47.6 Hz: spheres intra V 0.0214 vs
+  0.0237, uniform 0.0165 vs 0.0192 (~2-2.5 noise SD; possibly the diffusion
+  time, 139 vs 58 ms; cylinders uniform 0.0588 vs 0.0587); cylinders intra
+  LTE D 0.300 vs STE 0.336 (= (D_ax + 2 D_rad)/3): order-2 truncation bias
+  at K ~1.6 over b <= 4.5. User's decisions for the analysis: V_iso(f) = V
+  of the STE fits, mainly the TDE series, also showing STEiso and STEaniso
+  (mixed frequency); V_aniso(f) = V_LTE(f) - V_STE(f); cumulant order 3
+  (whether the order matters is a sub-objective, to be reported).
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
