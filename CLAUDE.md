@@ -344,9 +344,14 @@ Where things run:
   < 5% after aldehyde fixation (Korogod et al. 2015 eLife); mouse cortex
   ~9.2e4 neurons/mm^3, pyramidal soma volume ~1100 µm^3 (r ~6.4 µm), so
   neuronal somata fill only ~10% of cortex; the rest is mostly neuropil
-  (axons 31-36%, dendrites 23-35%), not free water. SANDI (Palombo et al.)
-  uses soma radii 2-10 µm (microglia to large neurons), neurites <= 1.5 µm;
-  ex-vivo mouse cortex fits r ~6-10 µm. Mouse corpus callosum inner axon
+  (axons 31-36%, dendrites 23-35%), not free water. SANDI (Palombo et al.
+  2020): simulations with soma radii 2-10 µm (microglia to large neurons),
+  neurites <= 1.5 µm; in-vivo human fits 2-12 µm (mean 10 +- 3); one
+  ex-vivo mouse brain, cortex matched r ~6-10 µm (soma signal fraction
+  60-65%, a model fraction, not the histological volume fraction). In-vivo
+  mouse SANDI (Ianus et al. 2022 NeuroImage 254:119135; 9.4 T, Delta 20 ms,
+  b <= 12.5): apparent radius 6-9 µm in GM. SANDI radii are MR-apparent
+  (tail-weighted towards large cells). Mouse corpus callosum inner axon
   diameters 0.47-0.88 µm (older EM studies) to 1.03 +- 0.41 µm (3D EM,
   Lee et al.), g-ratio ~0.6; gamma is the usual fit but GEV/log-normal fit
   better (Sepehrband et al. 2016). Rigid spheres cannot pack above ~0.64-0.7
@@ -360,7 +365,11 @@ Where things run:
   whereas in tissue that space is mostly neuropil. Move the soma radii
   towards mouse values and the axon radii to a smaller mean. Chosen
   (templates since 2026-09-30): spheres mean r ~6 µm, SD ~2.2 (gamma 5.76 /
-  1.04 µm, 2-12 µm), 480 in a 150 µm tile -> volume fraction 0.18;
+  1.04 µm, 2-12 µm), 480 in a 150 µm tile -> volume fraction 0.18 (placed
+  mean r 5.98 µm; MR-effective radius (<r^7>/<r^3>)^(1/4) ~8.7 µm, within
+  the mouse SANDI range; kept, user's decision 2026-10-01; planned: extra
+  scenarios with smaller radii, not meant to be realistic, to explore the
+  effect of smaller sizes on V_iso);
   cylinders: inner radius gamma alpha 4, beta 0.12 µm (mean ~0.49 µm,
   SD ~0.22, diameter ~1 µm), radii 0.15-1.5 µm, 1200 in a 60 µm tile with
   gap 0.1 µm -> area fraction 0.30 (kept in the plausible intra-axonal
