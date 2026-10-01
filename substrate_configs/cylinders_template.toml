@@ -48,3 +48,8 @@ radius_max = 1.5
 # max_attempts = 2000
 # Stop placing after this many cylinders in a row could not be placed
 # max_consecutive_failures = 100
+# Order of placement: "drawn" (order the radii were drawn) or "largest_first".
+# In the order drawn, placement stalls near the random packing limit (~0.3-0.35
+# for spheres) and then skips mostly large cylinders, biasing the radii; largest
+# first reaches denser packings (0.40 for spheres) with every cylinder placed.
+# placement_order = "drawn"

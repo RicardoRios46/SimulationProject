@@ -19,6 +19,7 @@ Conventions used by all generators:
     radius_fixed              Radius used when radius_distribution = "fixed" (µm)
     max_attempts              Random positions tried per object before skipping it
     max_consecutive_failures  Stop placing after this many objects in a row fail
+    placement_order           "drawn" (default) or "largest_first" (see place_objects())
     periodic                  Build a periodic tile (optional, default false, see tile_periodic())
 
 Outputs of save_substrate(), in substrate/<name>/:
@@ -53,6 +54,7 @@ PACKING_DEFAULTS = {
     "seed": None,
     "max_attempts": 2000,
     "max_consecutive_failures": 100,
+    "placement_order": "drawn",
     "periodic": False,
 }
 RADIUS_KEYS = {
@@ -118,6 +120,9 @@ def load_packing_params(description, required, optional=()):
                required=list(required) + RADIUS_KEYS[distribution],
                optional=list(PACKING_DEFAULTS) + all_radius_keys + list(optional))
 
+    if config.get("placement_order", "drawn") not in ("drawn", "largest_first"):
+        raise ValueError(f"{config_path}: placement_order must be 'drawn' or 'largest_first'")
+
     if distribution == "gamma" and config["radius_min"] >= config["radius_max"]:
         raise ValueError(f"{config_path}: radius_min must be smaller than radius_max")
 
@@ -165,8 +170,18 @@ def place_objects(rng, radii, dim, params, batch_size=100):
     early after params["max_consecutive_failures"] skipped objects in a row,
     or on Ctrl+C, keeping the objects placed so far.
 
+    Objects are placed in the order drawn, or largest first with
+    params["placement_order"] = "largest_first". Placing in the order drawn
+    stalls near the random sequential packing limit (~0.3-0.35 for spheres)
+    and then skips mostly large objects, biasing the radii; largest first
+    reaches denser packings (0.40 for spheres) with every object placed, so
+    the radius distribution is kept, as long as all objects fit.
+
     Returns (centers, placed_radii) as arrays of shape (k, dim) and (k,).
     """
+    if params["placement_order"] == "largest_first":
+        radii = np.sort(radii)[::-1]
+
     size = params["domain_size"]
     half = size / 2
     periodic = params["periodic"]
