@@ -24,6 +24,7 @@ The project uses:
 │   ├── Simulation.py       # Monte Carlo simulation (disimpy-env)
 │   ├── fit_powder_average.py # Powder-averaged signal: plots and fits (D, K, V) (dipy-env)
 │   ├── fit_tensor.py       # DKI tensor fit: FA, MD, AD, RD (dipy-env)
+│   ├── fit_viso.py         # V_iso and V_aniso across runs (dipy-env)
 │   ├── plot_trajectories.py # Walker trajectory plot (dipy-env)
 │   ├── analysis_utils.py   # Shared analysis functions
 │   ├── plot_waveforms.py   # Waveform visualization and checks (dipy-env)
@@ -676,6 +677,32 @@ easily.
 - DKI fit (DIPY) on each LTE waveform, using all its rotations and b-values,
   for FA, MD, AD and RD
 - Frequency dependence of MD, AD and RD
+
+### Isotropic and anisotropic variance: `fit_viso.py`
+
+Combines runs of the same substrate and walker position, e.g. the LTE/STE
+run and the TDE run (which need their own configs), and compares the cumulant
+fits at each centroid frequency:
+
+```bash
+pixi run -e dipy-env python src/fit_viso.py outputs/<lte_ste run>/<signal>.csv outputs/<tde run>/<signal>.csv --name <name> [--order 3] [--fix-intercept]
+```
+
+- V_iso(f): V of the STE series, the waveforms whose name starts with `TDE`
+  (`--ste-series`)
+- V_aniso(f) = V_LTE(f) − V_iso(f), pairing each LTE waveform with the STE
+  series waveform of the nearest centroid frequency
+- other STE waveforms (STEiso, STEaniso) are shown at their own centroid
+  frequency, and STEaniso is compared with STEiso (V_STEaniso − V_STEiso,
+  also for D and K), to see the effect of its different frequencies per axis
+  (`--ste-iso`, `--ste-aniso` set the waveform names)
+- frequency models (linear, square root, squared) for V_iso and V_aniso
+- cumulant order 3 by default (`--order 2` to compare)
+
+Outputs in `graphOutputs/viso/<name>/`: `viso_fit.csv` (per waveform: D, K,
+V, k3, skewness), `viso_pairs.csv` (per frequency: V_LTE, V_iso, V_aniso),
+`viso_frequency_fit.csv`, `viso_steaniso_vs_steiso.csv` and
+`viso_<name>.svg` (D, K and V against the centroid frequency).
 
 ### Analysis Outputs
 
