@@ -118,25 +118,40 @@ FREQUENCY_MODELS = {
 FREQUENCY_MODEL_COLORS = {"Squared": "#004949", "Linear": "#FF6B6B", "Square Root": "#009999"}
 
 
-def fit_frequency_models(freq, values):
+def fit_frequency_models(freq, values, criterion="sse"):
     """Least-squares fit of each model in FREQUENCY_MODELS.
 
-    Returns (fits, best): fits maps the model name to (slope, intercept,
-    sum of squared errors), best is the name of the model with the lowest error.
+    Returns (fits, best): fits maps the model name to a dict with the slope,
+    intercept, sum of squared errors (SSE), Akaike's Information Criterion
+    (AIC = n ln(SSE/n) + 2k, k = 2 parameters) and Akaike weight (relative
+    likelihood of each model, summing to 1); best is the model with the lowest
+    SSE or AIC (criterion "sse" or "aic").
+
+    NOTE: all models have the same k, so AIC ranks them exactly as SSE; with
+    3 frequencies the small-sample AICc is undefined (n - k - 1 = 0). AIC
+    becomes useful with more frequencies and models with different numbers of
+    parameters; the Akaike weights show how decisive the choice is.
     """
+    n, k = len(values), 2
     fits = {}
     for name, g in FREQUENCY_MODELS.items():
         slope, intercept = np.polyfit(g(freq), values, 1)
-        error = np.sum((values - (slope * g(freq) + intercept)) ** 2)
-        fits[name] = (slope, intercept, error)
-    best = min(fits, key=lambda name: fits[name][2])
+        sse = np.sum((values - (slope * g(freq) + intercept)) ** 2)
+        aic = n * np.log(max(sse, 1e-300) / n) + 2 * k
+        fits[name] = {"Slope": slope, "Intercept": intercept, "SSE": sse, "AIC": aic}
+    min_aic = min(fit["AIC"] for fit in fits.values())
+    likelihoods = {name: np.exp(-(fit["AIC"] - min_aic) / 2) for name, fit in fits.items()}
+    for name in fits:
+        fits[name]["AkaikeWeight"] = likelihoods[name] / sum(likelihoods.values())
+    key = {"sse": "SSE", "aic": "AIC"}[criterion]
+    best = min(fits, key=lambda name: fits[name][key])
     return fits, best
 
 
 def plot_frequency_models(ax, fits, best, x, label_suffix=""):
     """Draw the fitted frequency models over x (best fit solid, others dotted)."""
     for name in ["Squared", "Linear", "Square Root"]:
-        slope, intercept, _ = fits[name]
+        slope, intercept = fits[name]["Slope"], fits[name]["Intercept"]
         y = slope * FREQUENCY_MODELS[name](x) + intercept
         ax.plot(x, y, color=FREQUENCY_MODEL_COLORS[name],
                 linestyle='-' if name == best else ':', linewidth=2,

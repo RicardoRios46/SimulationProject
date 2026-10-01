@@ -48,6 +48,9 @@ parser.add_argument("--order", type=int, choices=[2, 3], default=3,
                     help="Order of the polynomial in b fitted to log(signal) (default 3)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
+parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
+                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                         "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 intercept = "fixed at 0" if args.fix_intercept else "fitted"
 print(f"Cumulant fit: order {args.order}, intercept {intercept}")
@@ -127,7 +130,7 @@ plt.close(fig)
 encodings = ["LTE", "STE"]
 groups = {enc: [wf for wf in waveforms if info[wf]["encoding"] == enc] for enc in encodings}
 max_freq = max(info[wf]["frequency"] for wf in waveforms)
-x1 = np.linspace(0, max(200, 1.1 * max_freq), 100)
+x1 = np.linspace(0, max(150, 1.1 * max_freq), 100)
 
 paramList = [("Diffusivity", "D", "Diffusivity (µm²/ms)"),
              ("Kurtosis", "K", "Kurtosis"),
@@ -148,12 +151,11 @@ for param_name, key, ylabel in paramList:
 
         #Each model has two parameters, so at least three frequencies are needed to compare them
         if len(group) >= 3:
-            freq_fits, best = fit_frequency_models(freq, param)
+            freq_fits, best = fit_frequency_models(freq, param, args.model_criterion)
             print(f"{enc} {param_name} Best Fit: {best}")
             plot_frequency_models(ax, freq_fits, best, x1, label_suffix=" Fit")
-            for model, (slope, model_intercept, error) in freq_fits.items():
-                frequency_rows.append({"Encoding": enc, "Parameter": param_name, "Model": model,
-                                       "Slope": slope, "Intercept": model_intercept, "SSE": error,
+            for model, model_fit in freq_fits.items():
+                frequency_rows.append({"Encoding": enc, "Parameter": param_name, "Model": model, **model_fit,
                                        "Best": model == best})
         else:
             ax.text(0.5, 0.5, f"{len(group)} {enc} waveform(s):\nat least 3 frequencies\nneeded for the model fits",
@@ -171,6 +173,7 @@ for param_name, key, ylabel in paramList:
     plt.savefig(f"{output}/{param_name}_{name}.svg", dpi=300)
     plt.close(fig)
 
-pd.DataFrame(frequency_rows, columns=["Encoding", "Parameter", "Model", "Slope", "Intercept", "SSE", "Best"]
+pd.DataFrame(frequency_rows, columns=["Encoding", "Parameter", "Model", "Slope", "Intercept", "SSE", "AIC",
+                                     "AkaikeWeight", "Best"]
              ).to_csv(f"{output}/powder_average_frequency_fit.csv", index=False)
 print(f"\nSaved results to {output}/")

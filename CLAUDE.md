@@ -479,6 +479,20 @@ Where things run:
   STE frequency series. The frequency-model choice (lowest SSE with 3
   points) is fragile: switching from nominal 0/50/100 Hz to centroids
   changed the best DKI AD/RD models on the test cylinders.
+- Frequency-model choice: SSE by default; `--model-criterion aic` (all
+  three analysis scripts, `analysis_utils.fit_frequency_models`) uses AIC,
+  and the frequency-fit CSVs always give SSE, AIC and Akaike weights (added
+  2026-10-01 at the user's request). With 3 frequencies and three
+  2-parameter models AIC ranks exactly as SSE, AICc is undefined
+  (n - k - 1 = 0) and the weights are overconfident (e.g. 0.998 for one
+  model). AIC needs more data points (frequencies) to be meaningful, e.g.
+  >= 4-5 frequencies and models with different numbers of parameters (such
+  as a power law a + b f^p). Plots show models up to 150 Hz.
+- Order 3 is the default of `fit_powder_average.py` and `fit_viso.py` since
+  2026-10-01 (order 2 biases D, K, V where K is large: cylinders intra LTE
+  D 0.300 at order 2 vs 0.331-0.340 at order 3, matching STE 0.339 and
+  (D_ax + 2 D_rad)/3 ~0.335). The signal plot shows D, K, V and k3 (the
+  skewness, which blows up when V ~ 0, is only in the CSV).
 - `fit_powder_average.py --order 3` adds the b^3 term (k3 = -6E, skewness
   k3/V^1.5); `--fix-intercept` sets C = 0. Pilot runs (2026-09-29,
   `sim_configs/pilot_*.toml`: 19 b-values 0-4500, 100k walkers, `uniform`,

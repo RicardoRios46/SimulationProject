@@ -667,9 +667,16 @@ The waveform files must still be the ones used in the simulation.
 
 The frequency dependence of a parameter is fitted against the centroid
 frequency with linear, square root and squared models, when there are at
-least three frequencies. The model with the lowest least-squares error is
-reported as the best fit. With only a few frequencies this choice can change
-easily.
+least three frequencies. The model with the lowest least-squares error (SSE)
+is reported as the best fit; `--model-criterion aic` (in `fit_powder_average.py`,
+`fit_tensor.py` and `fit_viso.py`) uses Akaike's Information Criterion
+instead. The frequency-fit CSVs give the SSE, AIC and Akaike weight of every
+model. With only a few frequencies the choice can change easily: all three
+models have two parameters, so AIC ranks them exactly as SSE, and with three
+frequencies the Akaike weights are overconfident (a model that happens to
+pass close to the three points gets a weight near 1). AIC becomes useful
+with more frequencies and models with different numbers of parameters.
+The frequency plots extend to 150 Hz (or 1.1x the highest frequency).
 
 ### Powder average: `fit_powder_average.py`
 

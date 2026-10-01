@@ -54,6 +54,9 @@ parser.add_argument("--ste-iso", default="STEiso",
                     help="Waveform compared with --ste-aniso (default STEiso)")
 parser.add_argument("--ste-aniso", default="STEaniso",
                     help="Waveform compared with --ste-iso: V_STEaniso - V_STEiso (default STEaniso)")
+parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
+                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                         "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 intercept = "fixed at 0" if args.fix_intercept else "fitted"
 print(f"Cumulant fit: order {args.order}, intercept {intercept}")
@@ -129,13 +132,12 @@ for quantity, freq, values in [("V_iso", ste.Frequency.to_numpy(), ste.Variance.
     if len(values) < 3:
         print(f"\nLess than three frequencies for {quantity}, skipping the frequency models")
         continue
-    freq_fits, best = fit_frequency_models(freq, values)
+    freq_fits, best = fit_frequency_models(freq, values, args.model_criterion)
     best_fits[quantity] = (freq_fits[best], best)
     print(f"{quantity} Best Fit: {best}")
-    for model, (slope, model_intercept, error) in freq_fits.items():
-        frequency_rows.append({"Quantity": quantity, "Model": model, "Slope": slope,
-                               "Intercept": model_intercept, "SSE": error, "Best": model == best})
-pd.DataFrame(frequency_rows, columns=["Quantity", "Model", "Slope", "Intercept", "SSE", "Best"]
+    for model, model_fit in freq_fits.items():
+        frequency_rows.append({"Quantity": quantity, "Model": model, **model_fit, "Best": model == best})
+pd.DataFrame(frequency_rows, columns=["Quantity", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
              ).to_csv(f"{output}/viso_frequency_fit.csv", index=False)
 
 #D, K and V against the centroid frequency
@@ -153,7 +155,8 @@ for (key, ylabel), ax in zip(panels, axes):
         ax.plot(pairs.Frequency_STE, pairs.V_aniso, "d-", color="tab:green", label="V_aniso = V_LTE - V_iso")
         for quantity, color in [("V_iso", "tab:red"), ("V_aniso", "tab:green")]:
             if quantity in best_fits:
-                (slope, model_intercept, _), best = best_fits[quantity]
+                model_fit, best = best_fits[quantity]
+                slope, model_intercept = model_fit["Slope"], model_fit["Intercept"]
                 ax.plot(x, slope * FREQUENCY_MODELS[best](x) + model_intercept, ":", color=color,
                         label=f"{quantity} fit: {best}")
         ax.axhline(0, color="gray", linewidth=0.8)

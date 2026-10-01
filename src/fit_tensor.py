@@ -35,6 +35,9 @@ from analysis_utils import (output_dir, load_signals, waveform_info,
 
 parser = argparse.ArgumentParser(description="Fit DKI on the LTE waveforms (FA, MD, AD, RD).")
 parser.add_argument("signals", help="Signal CSV written by Simulation.py")
+parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
+                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                         "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 
 name, output = output_dir(args.signals)
@@ -84,7 +87,7 @@ if len(lte) < 3:
     print("\nLess than three LTE waveforms, skipping the frequency dependence fits")
 else:
     freq = np.array([info[wf]["frequency"] for wf in lte])
-    x1 = np.linspace(0, max(200, 1.1 * freq.max()), 100)
+    x1 = np.linspace(0, max(150, 1.1 * freq.max()), 100)
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 5), sharex=True)
 
@@ -97,17 +100,16 @@ else:
 
     for metric_name, key, ax in metrics:
         diff = np.array([dki_results[wf][key] for wf in lte])
-        freq_fits, best = fit_frequency_models(freq, diff)
+        freq_fits, best = fit_frequency_models(freq, diff, args.model_criterion)
         print(f"{key} Best Fit: {best}")
-        for model, (slope, intercept, error) in freq_fits.items():
-            frequency_rows.append({"Parameter": key, "Model": model, "Slope": slope,
-                                   "Intercept": intercept, "SSE": error, "Best": model == best})
+        for model, model_fit in freq_fits.items():
+            frequency_rows.append({"Parameter": key, "Model": model, **model_fit, "Best": model == best})
 
         ax.scatter(freq, diff, color="red", marker="o", s=30, zorder=5, label="Data Points")
         plot_frequency_models(ax, freq_fits, best, x1)
 
         #Display best-fit equation and values
-        slope, intercept, _ = freq_fits[best]
+        slope, intercept = freq_fits[best]["Slope"], freq_fits[best]["Intercept"]
         power = {"Linear": "x", "Square Root": "x^1/2", "Squared": "x^2"}[best]
         values_text = "\n".join(f"{info[wf]['label']} ({f:.1f} Hz) = {v:.3f}"
                                 for wf, f, v in zip(lte, freq, diff))
@@ -130,6 +132,6 @@ else:
     plt.savefig(f"{output}/MD_AD_RD.png", dpi=300)
     plt.close(fig)
 
-pd.DataFrame(frequency_rows, columns=["Parameter", "Model", "Slope", "Intercept", "SSE", "Best"]
+pd.DataFrame(frequency_rows, columns=["Parameter", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
              ).to_csv(f"{output}/tensor_frequency_fit.csv", index=False)
 print(f"\nSaved results to {output}/")
