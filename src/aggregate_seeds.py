@@ -62,7 +62,11 @@ n_seeds = len(args.folders)
 if fits.Order.nunique() > 1:
     raise SystemExit(f"Error: the folders mix fit orders {sorted(fits.Order.unique())}")
 order = fits.Order.iloc[0]
-print(f"{n_seeds} seeds, order {order} fit")
+#BMax is missing in fit_viso.py results from before --b-max (all b fitted)
+b_max = fits.BMax.iloc[0] if "BMax" in fits else 10
+if "BMax" in fits and fits.BMax.nunique() > 1:
+    raise SystemExit(f"Error: the folders mix b_max values {sorted(fits.BMax.unique())}")
+print(f"{n_seeds} seeds, order {order} fit, b <= {b_max}")
 
 
 def stats(group, columns):
@@ -153,7 +157,7 @@ for (key, ylabel), ax in zip(panels, axes):
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(fontsize=7)
 
-fig.suptitle(f"{args.name}: mean +- SD over {n_seeds} seeds (order {order} fit)")
+fig.suptitle(f"{args.name}: mean +- SD over {n_seeds} seeds (order {order} fit, b <= {b_max})")
 plt.tight_layout()
 plt.savefig(f"{output}/seeds_{args.name}.svg", dpi=300)
 plt.close(fig)

@@ -28,7 +28,7 @@ Outputs in graphOutputs/viso/<name>/:
     viso_<name>.svg           D, K and V against the centroid frequency
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/fit_viso.py <signal.csv> [<signal.csv> ...] --name <name> [--order 2-5] [--fix-intercept]
+    pixi run -e dipy-env python src/fit_viso.py <signal.csv> [<signal.csv> ...] --name <name> [--order 2-5] [--fix-intercept] [--b-max 2.5]
 """
 
 import argparse
@@ -49,6 +49,8 @@ parser.add_argument("--order", type=int, choices=[2, 3, 4, 5], default=3,
                     help="Order of the polynomial in b fitted to log(signal) (default 3; 4 and 5 exploratory)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
+parser.add_argument("--b-max", type=float, default=10,
+                    help="Fit only b-values <= b_max (ms/µm², default 10: all of them)")
 parser.add_argument("--ste-series", default="TDE",
                     help="Name prefix of the STE waveforms that give V_iso(f) (default TDE)")
 parser.add_argument("--ste-iso", default="STEiso",
@@ -63,7 +65,7 @@ parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
                          "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 intercept = "fixed at 0" if args.fix_intercept else "fitted"
-print(f"Cumulant fit: order {args.order}, intercept {intercept}")
+print(f"Cumulant fit: order {args.order}, intercept {intercept}, b <= {args.b_max} ms/µm²")
 
 output = f"graphOutputs/viso/{args.name}"
 os.makedirs(output, exist_ok=True)
@@ -77,7 +79,8 @@ for signal_file in args.signals:
     for wf in sorted(info):
         wf_data = df_averaged.loc[wf]
         b_arr = np.array(wf_data.index) / 1000
-        fit = fit_cumulant(b_arr, wf_data.values, order=args.order, fix_intercept=args.fix_intercept)
+        fit = fit_cumulant(b_arr, wf_data.values, order=args.order, fix_intercept=args.fix_intercept,
+                           b_max=args.b_max)
         label = info[wf]["label"]
         if info[wf]["encoding"] == "LTE":
             series = "LTE"
@@ -91,6 +94,7 @@ for signal_file in args.signals:
                      **{f"k{n}": fit[f"k{n}"] for n in range(4, args.order + 1)}})
 
 fits = pd.DataFrame(rows).sort_values(["Series", "Frequency"])
+fits.insert(0, "BMax", args.b_max)
 fits.insert(0, "Order", args.order)
 fits.to_csv(f"{output}/viso_fit.csv", index=False)
 
@@ -171,7 +175,7 @@ for (key, ylabel), ax in zip(panels, axes):
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(fontsize=7)
 
-fig.suptitle(f"{args.name} (order {args.order} fit, intercept {intercept})")
+fig.suptitle(f"{args.name} (order {args.order} fit, intercept {intercept}, b <= {args.b_max})")
 plt.tight_layout()
 plt.savefig(f"{output}/viso_{args.name}.svg", dpi=300)
 plt.close(fig)
