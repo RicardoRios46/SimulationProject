@@ -220,9 +220,34 @@ Where things run:
   V_iso ~0.001 flat, gamma cylinders intra 0.001 / 0.009 / 0.021 and gamma
   spheres intra 0.002 / 0.005 / 0.020 at 8.6 / 47.6 / 98.6 Hz (radius
   spread -> V_iso grows with frequency); spheres V_aniso ~0; STE_A - STE_I
-  negative in every uniform case (down to -0.009, spheres). Seeds 2-6
-  running (2026-10-01); then fit_viso per seed at orders 2-5 and
-  aggregate_seeds.py per substrate/position (usage in its docstring).
+  negative in every uniform case (down to -0.009, spheres). Seeds 2-6: job
+  211849 (90 tasks, same times; memory peak max 71.3 GB over all 108 tasks,
+  so 100G has ~29% headroom; CPU ~21% of 4, so --cpus-per-task=1 would do).
+  Analysis (2026-10-02): fit_viso per seed at orders 2-5
+  (`graphOutputs/viso/viso2_<sub>_<pos>_rep<r>_order<o>/`) and with
+  `--b-max` 2.0-4.0 at orders 2-4 (`..._order<o>_bmax<2p0..4p0>/`),
+  aggregated over the 6 seeds (`..._order<o>[_bmax<b>]_seeds/`). Results
+  (order 3, all b, mean +- SD, n 6): V_iso intra cylfixed 0.0012 / 0.0012 /
+  0.0010 (flat), cylgamma 0.0013 / 0.0086 / 0.0208, sphgamma 0.0016 /
+  0.0050 / 0.0204 (+-0.0002) at 8.6 / 47.6 / 98.6 Hz; V_aniso intra
+  cylfixed 0.085 / 0.079 / 0.067, cylgamma 0.083 / 0.067 / 0.050, spheres
+  ~0 (+-0.001). STE_I,pad - TDE50 (V): intra within +-0.0002; extra and
+  uniform ~+0.001 (t 4-9 at orders 4-5: small but real, same centroid but
+  different spectral shape). STE_A - STE_I (V): uniform -0.0036 / -0.0027 /
+  -0.0092 (cylfixed / cylgamma / sphgamma, |t| 12-90), extra within noise,
+  sphgamma intra +0.0009 (t 89, tiny but precise: intra signal in small
+  spheres has very low MC noise). Fit order: intra/extra converge from
+  order 3-4; uniform does NOT (two-compartment mixture, D_intra << D_extra):
+  sphgamma uniform V(TDE50) 0.097 / 0.171 / 0.159 / 0.135 at orders 2-5.
+  Check against the expected mixture V = f V_i + (1-f) V_e + f(1-f)(D_i -
+  D_e)^2 (impermeable, f = volume fraction, intra/extra from order 4, b <=
+  2.5): TDE50 expected 0.135 (sphgamma), 0.053 (cylfixed), 0.043
+  (cylgamma); order 4 matches for the cylinders at every b_max (0.052,
+  0.042), order 2 at b <= 2 (0.135) and order 4 at b <= 2.5 (0.138) for the
+  spheres; order 3 at all b overestimates uniform V by ~20-27% (0.171,
+  0.066, 0.052) and drifts with b_max. User's decision (2026-10-02): keep
+  order 3 in the main results with a caveat for uniform; the b_max test
+  goes in the supplementary material of the next report.
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
@@ -540,6 +565,9 @@ Where things run:
   f_min)^theta, f_min the frequency closest to 0 (likewise for K, V). With 3
   frequencies its 3 parameters fit exactly (no residual), so it needs more
   frequencies or constraints (e.g. fixed theta, pooled fits) to be stable.
+- `fit_viso.py --b-max` (default 10: all b) fits only b <= b_max; the
+  value is the `BMax` column of viso_fit.csv, and aggregate_seeds.py
+  refuses to mix b_max values (or orders).
 - Cumulant order: `--order 2-5` (fit_powder_average, fit_viso; k4 = 24F,
   k5 = -120G); 4 and 5 are exploratory (user's request). First look
   (template substrates, one seed, intra): orders 4 and 5 agree within ~2%,
