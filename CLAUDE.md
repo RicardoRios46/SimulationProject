@@ -12,8 +12,10 @@ Monte Carlo diffusion MRI simulation pipeline:
 2. Simulate with disimpy on GPU (`src/Simulation.py`, `disimpy-env`)
 3. Analyze signals (`dipy-env`): `src/fit_powder_average.py` (powder-averaged
    signal: plots, cumulant fit D/K/V, frequency dependence per encoding),
-   `src/fit_tensor.py` (DKI on the LTE waveforms), `src/plot_trajectories.py`,
-   sharing `src/analysis_utils.py`. Each writes its own results CSVs.
+   `src/fit_tensor.py` (DKI on the LTE waveforms), `src/fit_viso.py` (V_iso
+   and V_aniso across runs), `src/aggregate_seeds.py` (mean, SD, SEM over
+   seed repeats of fit_viso), `src/plot_trajectories.py`, sharing
+   `src/analysis_utils.py`. Each writes its own results CSVs.
 
 Always run scripts from the project root; all paths are relative to it.
 
@@ -35,10 +37,21 @@ microstructure (packed cylinders and spheres, CATERPillar axons).
   `rotations/`) for each waveform and b-value; fitting log(signal) vs b gives
   D, kurtosis and variance for each waveform.
 - DKI (DIPY) is fitted on the LTE data for FA, MD, AD and RD.
-- Frequency dependence of D, K and V is compared between linear, square root
-  and squared models.
-- V_iso (variance from STE powder-average fits) is **not computed yet**; it is
-  a planned analysis (see Analysis under Open work).
+- Frequency dependence of D, K and V: plotted against the centroid
+  frequency; the linear / square root / squared model choice is optional
+  (`--frequency-models`, see Analysis under Open work).
+- V_iso = V of the STE (TDE) fits, V_aniso = V_LTE - V_iso (`fit_viso.py`).
+
+## Reports
+
+- `reports/` is git-ignored (Typst, elsearticle template; Typst at
+  `/home/ricardo/software/typst/typst`, compile with `--font-path fonts`).
+  `reports/viso_2026-10/` (V_iso consistency TDE vs STE_I, STE_A - STE_I,
+  order 2 vs 3; shown to the collaborators) is ARCHIVED, read-only
+  (`chmod -R a-w`): do not update it. The follow-up results (see "V_iso
+  follow-up" under Simulation settings) go in a new report folder with its
+  own `make_figures.py`; it must include V_aniso. Report abbreviations:
+  STE_I = STEiso, STE_A = STEaniso.
 
 ## Environments (pixi)
 
@@ -192,11 +205,24 @@ Where things run:
   diffusivities per axis acting as variance), intra -0.003 (order 3) /
   -0.010 (order 2), extra +-0.005 (sign changes with order: noise).
   Each value is from one run (one seed): no error bars yet.
-- Uncertainty (later): repeat the V_iso configs with several seeds to get
-  mean +- SD per point (and on the order comparison and STEaniso - STEiso).
-  Feasible as an overnight run (set A ~25-30 min, TDE ~40-60 min per config
-  at 1M walkers, 12 configs per seed, 14 GPUs on hx); the user decided the
-  single-seed results are good enough for now (2026-10-01).
+- V_iso follow-up (collaborators' suggestions, 2026-10-01; results for the
+  next report): `sim_configs/viso2/` (108 configs; `list_rep1.txt`,
+  `list_rep2-6.txt`), outputs `outputs/viso2_<sub>_<lte|long>_<position>_rep<1-6>/`,
+  sub = cylfixed / cylgamma / sphgamma (the 3 µm diameter substrates, see
+  Substrates), set `lte` = LTE0/50/100 (n_t 20000), set `long` = STEiso_pad,
+  STEaniso_pad, TDE0/50/100 (139.2 ms, n_t 48000), intra/extra/uniform, 1M
+  walkers, 10 b-values, 6 seeds (20000 + rep*100 + index), --mem=100G. The
+  earlier seed repeats of the template-substrate V_iso run were dropped for
+  this. Seed 1 (job 211809): lte 20 min (cylinders) / 32 min (spheres),
+  long 62-66 / 77-80 min, setup 50-80 s; memory peak lte 26-42 GB, long
+  58-71 GB; CPU ~21% of 4. ~14 GPU-h per seed. Seed-1 results (order 3):
+  STEiso_pad - TDE50 within 0.0015 everywhere; fixed-radius cylinders intra
+  V_iso ~0.001 flat, gamma cylinders intra 0.001 / 0.009 / 0.021 and gamma
+  spheres intra 0.002 / 0.005 / 0.020 at 8.6 / 47.6 / 98.6 Hz (radius
+  spread -> V_iso grows with frequency); spheres V_aniso ~0; STE_A - STE_I
+  negative in every uniform case (down to -0.009, spheres). Seeds 2-6
+  running (2026-10-01); then fit_viso per seed at orders 2-5 and
+  aggregate_seeds.py per substrate/position (usage in its docstring).
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
@@ -204,7 +230,11 @@ Where things run:
   frequencies, b-tensor) and compare several with `src/compare_waveforms.py`
   (`--sum-check` verifies an STE equals the sum of its LTE components; true
   for the current STEiso and STEaniso files);
-  both use the calculations in `src/waveform_utils.py`. At file amplitude the current waveforms all have
+  both use the calculations in `src/waveform_utils.py`. `STEiso_pad` /
+  `STEaniso_pad` (`src/pad_waveforms.py`): zeros appended to 6960 rows
+  (139.2 ms, TDE length; same b-tensor and spectrum) so they run in the TDE
+  configs (user's decision: equal durations for the comparison; a longer
+  pause around the 180° pulse was not used, it would change STEaniso's b_x). At file amplitude the current waveforms all have
   b = 4500 s/mm² (components 1500). STEiso and STEaniso both have an isotropic
   b-tensor; they differ in the spectral content per axis. Centroid frequencies
   (dephasing spectrum |Q(f)|^2, checked with the collaborators on
@@ -391,6 +421,20 @@ Where things run:
   (large spheres skipped); largest first 0.54 (gap 1), 0.64 (0.2), 0.675
   (0.2, 20000 attempts, 750 s), but bimodal: nearly all 8-12 µm and < 2 µm
   spheres placed, only 20-30% of 3-8 µm.
+- Substrates with diameter 3 µm (mean r 1.5 µm; not realistic, to explore
+  smaller soma and thicker axons; user's decisions 2026-10-01, configs in
+  `substrate_configs/`, seed 123): `cylinders_d3um_fixed.toml` ->
+  cylinders_1200_fixed_r1p5_gap0p1_periodic (168 µm tile, area fraction
+  0.300); `cylinders_d3um_gamma.toml` ->
+  cylinders_1200_gamma_shape4_scale0p375_gap0p1_periodic (template shape,
+  r 0.45-4.5 µm, 188 µm tile, 0.298, r 1.52 +- 0.69);
+  `spheres_d3um_vf0p40.toml` -> spheres_1335_gamma_shape5p76_scale0p26_
+  gap0p25_periodic (template shape, r 0.5-3 µm, gap 0.25, 40 µm tile,
+  1335/1340 placed, volume fraction 0.398, r 1.47 +- 0.54, 5.2M faces).
+  Volume fraction 0.40 needs `placement_order = "largest_first"` (option in
+  `common.place_objects`, default "drawn"): in drawn order placement stalls
+  at 0.31-0.36 and skips large spheres (placed mean r 1.31-1.34 vs 1.47
+  drawn); largest first places all of them, keeping the distribution.
 - Myelin (future): the cylinders have no myelin (all space outside is free
   water). Later, myelinated axons could be modelled as an excluded ring
   between an inner (axon) and outer (fibre) radius, g-ratio ~0.6-0.7, with
@@ -488,7 +532,20 @@ Where things run:
   STE frequency series. The frequency-model choice (lowest SSE with 3
   points) is fragile: switching from nominal 0/50/100 Hz to centroids
   changed the best DKI AD/RD models on the test cylinders.
-- Frequency-model choice: SSE by default; `--model-criterion aic` (all
+- Frequency models are OPTIONAL since 2026-10-01 (user's decision; we are
+  not choosing between linear / square root / squared any more):
+  `--frequency-models` in fit_powder_average / fit_tensor / fit_viso, off by
+  default (no `*_frequency_fit.csv` then). Planned instead (note only, fit
+  stability to be explored first): a power law D(f) = D_0Hz + Lambda (f -
+  f_min)^theta, f_min the frequency closest to 0 (likewise for K, V). With 3
+  frequencies its 3 parameters fit exactly (no residual), so it needs more
+  frequencies or constraints (e.g. fixed theta, pooled fits) to be stable.
+- Cumulant order: `--order 2-5` (fit_powder_average, fit_viso; k4 = 24F,
+  k5 = -120G); 4 and 5 are exploratory (user's request). First look
+  (template substrates, one seed, intra): orders 4 and 5 agree within ~2%,
+  V shifts a further 8-20% from order 3 (cylinders LTE0 V 0.086 -> 0.093,
+  spheres TDE50 0.0107 -> 0.0128), D barely changes; check with the seeds.
+- Frequency-model choice (with --frequency-models): SSE by default; `--model-criterion aic` (all
   three analysis scripts, `analysis_utils.fit_frequency_models`) uses AIC,
   and the frequency-fit CSVs always give SSE, AIC and Akaike weights (added
   2026-10-01 at the user's request). With 3 frequencies and three
@@ -497,6 +554,8 @@ Where things run:
   model). AIC needs more data points (frequencies) to be meaningful, e.g.
   >= 4-5 frequencies and models with different numbers of parameters (such
   as a power law a + b f^p). Plots show models up to 150 Hz.
+- V_aniso(f) = V_LTE(f) - V_iso(f) must be included in the next report
+  (user's note, 2026-10-01).
 - Order 3 is the default of `fit_powder_average.py` and `fit_viso.py` since
   2026-10-01 (order 2 biases D, K, V where K is large: cylinders intra LTE
   D 0.300 at order 2 vs 0.331-0.340 at order 3, matching STE 0.339 and
@@ -517,13 +576,12 @@ Where things run:
   simulation is deterministic, not that the noise is small; the n_t test
   showed the noise is large for the nearly Gaussian spheres signal (see
   Simulation settings).
-- Compute V_iso from the STE powder-average fits at each frequency. Needs the
-  STE waveforms at every frequency (see Waveforms and protocol).
-  Diffusion time: the TDE waveforms last 139.2 ms (each axis encoded in its
-  own time window), the LTE/STEiso/STEaniso waveforms 58.16 ms. Comparing V
-  (or V_iso) between a TDE and an LTE/STE at the same centroid frequency also
-  compares different encoding times; revisit this when comparing V_iso
-  between waveforms (user's note, 2026-09-30).
+- Diffusion time / spectrum: the TDE waveforms last 139.2 ms, the
+  LTE/STEiso/STEaniso waveforms 58.16 ms. The user's view (2026-10-01): the
+  full diffusion (dephasing) spectrum of each waveform, not the encoding
+  time or a single centroid, should describe the signal; explore this idea
+  in the literature. The padded STE waveforms make the STE/TDE durations
+  equal in the follow-up runs.
 
 ### Waveforms and protocol
 
