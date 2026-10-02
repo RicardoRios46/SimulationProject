@@ -49,9 +49,20 @@ microstructure (packed cylinders and spheres, CATERPillar axons).
   `reports/viso_2026-10/` (V_iso consistency TDE vs STE_I, STE_A - STE_I,
   order 2 vs 3; shown to the collaborators) is ARCHIVED, read-only
   (`chmod -R a-w`): do not update it. The follow-up results (see "V_iso
-  follow-up" under Simulation settings) go in a new report folder with its
-  own `make_figures.py`; it must include V_aniso. Report abbreviations:
-  STE_I = STEiso, STE_A = STEaniso.
+  follow-up" under Simulation settings) are in `reports/viso2_2026-10/`
+  (finished 2026-10-02, same authors; `make_figures.py` reads the
+  aggregate_seeds.py folders and the per-seed fit_viso folders; compile
+  with `--font-path fonts` from that folder). Layout chosen by the user:
+  Fig. 1 substrates; Fig. 2 D(f) (TDE and LTE) + forest plot of the paired
+  D differences; Fig. 3 V_iso(f) and V_aniso(f) + forest plot of the V
+  differences; Fig. 4 V_iso(TDE50) vs fit order with the expected mixture
+  value for uniform; Table 1 V of the isotropic encodings (TDE series,
+  STE_I, STE_A), Table 2 V_aniso; supplement: b_max test (figure and
+  table), kurtosis arranged as Fig. 2, padded waveforms, waveform table,
+  V-difference table. Values as mean +- SD, differences as mean +- 95% CI
+  (t_0.975,5 x SEM); t only to say whether a difference is above the noise
+  (t = mean/SEM is not an effect size). Report abbreviations: STE_I =
+  STEiso, STE_A = STEaniso.
 
 ## Environments (pixi)
 
@@ -236,7 +247,11 @@ Where things run:
   different spectral shape). STE_A - STE_I (V): uniform -0.0036 / -0.0027 /
   -0.0092 (cylfixed / cylgamma / sphgamma, |t| 12-90), extra within noise,
   sphgamma intra +0.0009 (t 89, tiny but precise: intra signal in small
-  spheres has very low MC noise). Fit order: intra/extra converge from
+  spheres has very low MC noise). D: STE_I - TDE50 within the noise
+  everywhere (<= 0.5e-3); STE_A - STE_I positive where D depends on f
+  (intra +11.5e-3 cylfixed, +8.6e-3 cylgamma, +22.5e-3 sphgamma): STE_A's D
+  ~ the mean of D(f) at its three axis frequencies, above D at 47.6 Hz as
+  D(f) is convex. Fit order: intra/extra converge from
   order 3-4; uniform does NOT (two-compartment mixture, D_intra << D_extra):
   sphgamma uniform V(TDE50) 0.097 / 0.171 / 0.159 / 0.135 at orders 2-5.
   Check against the expected mixture V = f V_i + (1-f) V_e + f(1-f)(D_i -
