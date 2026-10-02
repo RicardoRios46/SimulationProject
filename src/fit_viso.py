@@ -17,10 +17,10 @@ off by default, the choice is not reliable with three frequencies).
 The waveforms are identified from their files as in fit_powder_average.py
 (encoding from the b-tensor shape, frequency = centroid of |Q(f)|^2), and
 fitted with the same cumulant expansion (see analysis_utils.fit_cumulant):
-    log S = C + B b + A b^2 (+ E b^3 for order 3), D = -B, V = 2A, K = 3V/D²
+    log S = C + B b + A b^2 (+ E b^3 + F b^4 + G b^5 up to the order), D = -B, V = 2A, K = 3V/D²
 
 Outputs in graphOutputs/viso/<name>/:
-    viso_fit.csv              Per waveform: run, encoding, frequency, D, K, V, k3, skewness
+    viso_fit.csv              Per waveform: run, encoding, frequency, D, K, V, k3, skewness (k4, k5 for order 4, 5)
     viso_pairs.csv            Per LTE frequency: V_LTE, V_iso, V_aniso (and D, K of both)
     viso_frequency_fit.csv    Frequency models of V_iso and V_aniso (--frequency-models)
     viso_steaniso_vs_steiso.csv   D, K, V of STEiso and STEaniso and their differences
@@ -28,7 +28,7 @@ Outputs in graphOutputs/viso/<name>/:
     viso_<name>.svg           D, K and V against the centroid frequency
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/fit_viso.py <signal.csv> [<signal.csv> ...] --name <name> [--order 3] [--fix-intercept]
+    pixi run -e dipy-env python src/fit_viso.py <signal.csv> [<signal.csv> ...] --name <name> [--order 2-5] [--fix-intercept]
 """
 
 import argparse
@@ -45,8 +45,8 @@ from analysis_utils import (load_signals, powder_average, waveform_info, fit_cum
 parser = argparse.ArgumentParser(description="Compare V of LTE and STE waveforms across runs (V_iso, V_aniso).")
 parser.add_argument("signals", nargs="+", help="Signal CSVs written by Simulation.py (same substrate and position)")
 parser.add_argument("--name", required=True, help="Output name, results in graphOutputs/viso/<name>/")
-parser.add_argument("--order", type=int, choices=[2, 3], default=3,
-                    help="Order of the polynomial in b fitted to log(signal) (default 3)")
+parser.add_argument("--order", type=int, choices=[2, 3, 4, 5], default=3,
+                    help="Order of the polynomial in b fitted to log(signal) (default 3; 4 and 5 exploratory)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
 parser.add_argument("--ste-series", default="TDE",
@@ -87,7 +87,8 @@ for signal_file in args.signals:
             series = "other"
         rows.append({"Run": Path(signal_file).stem, "Waveform": label, "Encoding": info[wf]["encoding"],
                      "Series": series, "Frequency": info[wf]["frequency"], "D": fit["D"],
-                     "Kurtosis": fit["K"], "Variance": fit["V"], "k3": fit["k3"], "Skewness": fit["skewness"]})
+                     "Kurtosis": fit["K"], "Variance": fit["V"], "k3": fit["k3"], "Skewness": fit["skewness"],
+                     **{f"k{n}": fit[f"k{n}"] for n in range(4, args.order + 1)}})
 
 fits = pd.DataFrame(rows).sort_values(["Series", "Frequency"])
 fits.insert(0, "Order", args.order)

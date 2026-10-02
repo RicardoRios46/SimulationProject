@@ -12,7 +12,8 @@ spectrum |Q(f)|^2.
 Cumulant fit of log(signal), b in ms/µm²:
     order 2:            log S = C + B b + A b^2
     order 3 (default):  log S = C + B b + A b^2 + E b^3
-    D = -B, V = 2A, K = 3V/D², k3 = -6E, skewness = k3 / V^(3/2)
+    orders 4, 5:        + F b^4 (+ G b^5), exploratory
+    D = -B, V = 2A, K = 3V/D², k3 = -6E, skewness = k3 / V^(3/2), k4 = 24F, k5 = -120G
 C is fitted, or fixed at 0 (S = 1 at b = 0) with --fix-intercept.
 
 Frequency models (optional, --frequency-models): for each encoding with at
@@ -25,13 +26,13 @@ Outputs in graphOutputs/<signal>/ (overwritten by each run, whatever the options
     powder_average_signal.csv           Powder-averaged signal per waveform and b-value
     powder_average_fit.csv              Per waveform: encoding, frequency, fit settings,
                                         coefficients C, B, A, E, D, kurtosis, variance
-                                        (and k3, skewness for order 3)
+                                        (and k3, skewness for order >= 3, k4, k5 for 4, 5)
     powder_average_frequency_fit.csv    Frequency models per encoding and parameter (--frequency-models)
-    signal_fit_<signal>.svg             Signal decay with the fits (D, K, V and, for order 3, k3)
+    signal_fit_<signal>.svg             Signal decay with the fits (D, K, V and, for order >= 3, k3 to k5)
     Diffusivity_/Kurtosis_/Variance_<signal>.svg   Frequency dependence of D, K, V
 
 Usage (from the project root):
-    pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal>.csv [--order 2] [--fix-intercept]
+    pixi run -e dipy-env python src/fit_powder_average.py outputs/<config>/<signal>.csv [--order 2-5] [--fix-intercept]
 """
 
 import argparse
@@ -41,12 +42,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from analysis_utils import (output_dir, load_signals, powder_average, waveform_info,
-                            fit_cumulant, fit_frequency_models, plot_frequency_models)
+                            fit_cumulant, cumulant_curve, fit_frequency_models, plot_frequency_models)
 
 parser = argparse.ArgumentParser(description="Powder-average the signal and fit it (D, K, V).")
 parser.add_argument("signals", help="Signal CSV written by Simulation.py")
-parser.add_argument("--order", type=int, choices=[2, 3], default=3,
-                    help="Order of the polynomial in b fitted to log(signal) (default 3)")
+parser.add_argument("--order", type=int, choices=[2, 3, 4, 5], default=3,
+                    help="Order of the polynomial in b fitted to log(signal) (default 3; 4 and 5 exploratory)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
 parser.add_argument("--frequency-models", action="store_true",
@@ -91,17 +92,18 @@ for wf in waveforms:
         "Frequency": info[wf]["frequency"],
         "Order": args.order,
         "FixedIntercept": args.fix_intercept,
-        **{key: fit[key] for key in ["C", "B", "A", "E"]},
+        **{key: fit[key] for key in ["C", "B", "A", "E", "F", "G"][:args.order + 1]},
         "D": fit["D"],
         "Kurtosis": fit["K"],
         "Variance": fit["V"],
     }
-    if args.order == 3:
+    if args.order >= 3:
         row.update({"k3": fit["k3"], "Skewness": fit["skewness"]})
+    row.update({f"k{n}": fit[f"k{n}"] for n in range(4, args.order + 1)})
     fit_rows.append(row)
 pd.DataFrame(fit_rows).to_csv(f"{output}/powder_average_fit.csv", index=False)
 
-#Signal decay with the fitted curves (order 3 shows k3; the skewness, which
+#Signal decay with the fitted curves (order >= 3 shows k3 to k5; the skewness, which
 #blows up when V ~ 0, is only in the CSV)
 x_fit = np.linspace(0, max(df['bval']) / 1000, 100)
 fig, ax = plt.subplots(figsize=(9, 5))
@@ -112,10 +114,10 @@ for wf in waveforms:
     label_name = info[wf]["label"]
 
     fit = fits[wf]
-    y_fit = np.exp(np.polyval([fit["E"], fit["A"], fit["B"], fit["C"]], x_fit))
+    y_fit = np.exp(cumulant_curve(fit, x_fit))
     fit_label = f"D: {fit['D']:.4f} µm²/ms\nK: {fit['K']:.4f}\nV: {fit['V']:.4f} µm⁴/ms²"
-    if args.order == 3:
-        fit_label += f"\nk3: {fit['k3']:.4f} µm⁶/ms³"
+    for n in range(3, args.order + 1):
+        fit_label += f"\nk{n}: {fit[f'k{n}']:.4f} µm$^{{{2 * n}}}$/ms$^{{{n}}}$"
     ax.scatter(b_arr, wf_data.values, marker='o', label=rf"$\bf{{{label_name}\ Data}}$")
     ax.plot(x_fit, y_fit, linestyle='--', label=fit_label)
 

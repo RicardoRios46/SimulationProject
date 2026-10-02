@@ -74,14 +74,17 @@ def waveform_info(df, signal_file):
 
 def fit_cumulant(b, signal, order=2, fix_intercept=False, b_max=10):
     """Fit the cumulant expansion of log(signal), with b in ms/µm² (only b <= b_max):
-        order 2:  log(signal) = C + B b + A b^2
-        order 3:  log(signal) = C + B b + A b^2 + E b^3
-    With fix_intercept, C = 0 (signal = 1 at b = 0).
+        log(signal) = C + B b + A b^2 + E b^3 + F b^4 + G b^5
+    up to the given order (2 to 5; the higher coefficients are 0). With
+    fix_intercept, C = 0 (signal = 1 at b = 0).
 
-    Following log S = -b D + (b^2/2) V - (b^3/6) k3 + ..., returns a dict with
-    the coefficients A, B, C, E (E = 0 for order 2) and
+    Following log S = -b D + (b^2/2) V - (b^3/6) k3 + (b^4/24) k4 - (b^5/120) k5,
+    returns a dict with the coefficients C, B, A, E, F, G and
         D = -B (µm²/ms), V = 2A (µm⁴/ms²), K = 3V/D² = 6A/D²,
-        k3 = -6E (µm⁶/ms³), skewness = k3 / V^(3/2) (NaN if V <= 0 or order 2).
+        k3 = -6E, k4 = 24F, k5 = -120G (cumulants of order 3-5),
+        skewness = k3 / V^(3/2) (NaN if V <= 0 or order 2).
+    Orders 4 and 5 are exploratory: with 10 b-values up to 4.5 ms/µm² the
+    higher terms are poorly determined and make the lower ones noisier.
     """
     mask = b <= b_max
     b, y = b[mask], np.log(signal[mask])
@@ -91,22 +94,26 @@ def fit_cumulant(b, signal, order=2, fix_intercept=False, b_max=10):
         coeffs = np.append(coeffs, 0.0)
     else:
         coeffs = np.polyfit(b, y, order)
-    if order == 2:
-        coeffs = np.insert(coeffs, 0, 0.0)
-    E, A, B, C = coeffs
+    #Pad to order 5, highest power first: G, F, E, A, B, C
+    G, F, E, A, B, C = np.concatenate([np.zeros(5 - order), coeffs])
     if abs(A) < 1e-9:
         A = 0
-    return cumulant_parameters(C, B, A, E, order)
+    return cumulant_parameters(C, B, A, E, F, G, order)
 
 
-def cumulant_parameters(C, B, A, E, order):
+def cumulant_parameters(C, B, A, E, F, G, order):
     """Coefficients and derived parameters of a cumulant fit (see fit_cumulant)."""
     D = -B
     V = A * 2
     k3 = -6 * E
-    skewness = k3 / V**1.5 if order == 3 and V > 0 else np.nan
-    return {"A": A, "B": B, "C": C, "E": E, "D": D, "K": (6 * A) / (D**2), "V": V,
-            "k3": k3, "skewness": skewness}
+    skewness = k3 / V**1.5 if order >= 3 and V > 0 else np.nan
+    return {"A": A, "B": B, "C": C, "E": E, "F": F, "G": G, "D": D, "K": (6 * A) / (D**2), "V": V,
+            "k3": k3, "k4": 24 * F, "k5": -120 * G, "skewness": skewness}
+
+
+def cumulant_curve(fit, b):
+    """log(signal) of a cumulant fit (see fit_cumulant) at the b-values b (ms/µm²)."""
+    return np.polyval([fit[key] for key in ["G", "F", "E", "A", "B", "C"]], b)
 
 
 #Frequency dependence models: value = slope * g(f) + intercept
