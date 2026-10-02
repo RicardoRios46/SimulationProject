@@ -263,6 +263,27 @@ Where things run:
   0.066, 0.052) and drifts with b_max. User's decision (2026-10-02): keep
   order 3 in the main results with a caveat for uniform; the b_max test
   goes in the supplementary material of the next report.
+- Cylinder radius sweep for V_aniso (planned 2026-10-02, user's
+  decisions): fixed radii 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6 µm, substrates
+  `substrate_configs/cylinders_fixed_r<R>.toml` ->
+  cylinders_1200_fixed_r<R>_gap0p1_periodic (1200 cylinders, tile
+  R x 112 µm, area fraction 0.300; r1p5 is the viso2 substrate), intra
+  only, D_0 = 1 µm²/ms, 1M walkers, 3 seeds (30000 + rep*100 + index).
+  All waveforms have the same length (user's decision): LTE0/50/100_pad
+  (`pad_waveforms.py LTE0hz LTE50hz LTE100hz`, same b and centroids),
+  STEiso_pad, STEaniso_pad and TDE0/50/100 (139.2 ms) in ONE config per
+  radius and seed (n_t 48000, rotation_file list: fibRot40 for LTE,
+  ESRD2_0040 for STE/TDE): `sim_configs/radii/` (27 configs, `list.txt`).
+  2880 gradients -> memory peak ~1.6x the viso2 long set (58-71 GB), so
+  ~95-115 GB: submit with --mem=160G. Run time ~65-80 min per config
+  (depends mostly on steps x walkers). Expected (one-mode model, checked on viso2 cylfixed r 1.5 within
+  ~5%): V_aniso = (4/45)(D_0 - D_rad)^2, D_rad(f) ~ D_0 w^2/(a1^2 + w^2),
+  a1 = 1.841^2 D_0/R^2, f_c = a1/2pi; V_aniso changes most across 8-100 Hz
+  for R ~1.5-4 µm (drop 27% at 1.5, 57% at 2, 81% at 2.5, 92% at 3),
+  flat at ~0.089 below ~1 µm, already small at 8 Hz above ~5 µm. f_c
+  scales as D_0/R^2 (an ex-vivo D_0 ~0.5 shifts this to radii ~1.4x
+  smaller). The "0 Hz" PGSE spectrum is broad, so the model underestimates
+  D_rad there for large R.
 - Waveform files (`waveforms/*.csv`): N x 3, mT/m, 0.02 ms per row by
   default, and already include the effect of the 180° pulse (sign flip). The
   `*_LTE1/2/3` files are the three LTE components of the STE waveforms. Check
