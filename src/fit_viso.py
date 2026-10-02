@@ -9,9 +9,10 @@ cumulant fits of the waveforms at each centroid frequency:
                  series waveform of the nearest centroid frequency
 
 The other STE waveforms (e.g. STEiso, STEaniso, whose axes have different
-frequencies) are shown at their own centroid frequency. The frequency
-dependence of V_iso and V_aniso is fitted with the linear, square root and
-squared models (at least three frequencies).
+frequencies) are shown at their own centroid frequency. With
+--frequency-models, the frequency dependence of V_iso and V_aniso is fitted
+with the linear, square root and squared models (at least three frequencies;
+off by default, the choice is not reliable with three frequencies).
 
 The waveforms are identified from their files as in fit_powder_average.py
 (encoding from the b-tensor shape, frequency = centroid of |Q(f)|^2), and
@@ -21,7 +22,7 @@ fitted with the same cumulant expansion (see analysis_utils.fit_cumulant):
 Outputs in graphOutputs/viso/<name>/:
     viso_fit.csv              Per waveform: run, encoding, frequency, D, K, V, k3, skewness
     viso_pairs.csv            Per LTE frequency: V_LTE, V_iso, V_aniso (and D, K of both)
-    viso_frequency_fit.csv    Frequency models of V_iso and V_aniso
+    viso_frequency_fit.csv    Frequency models of V_iso and V_aniso (--frequency-models)
     viso_steaniso_vs_steiso.csv   D, K, V of STEiso and STEaniso and their differences
                               (STEaniso - STEiso), if both waveforms are in the runs
     viso_<name>.svg           D, K and V against the centroid frequency
@@ -54,8 +55,11 @@ parser.add_argument("--ste-iso", default="STEiso",
                     help="Waveform compared with --ste-aniso (default STEiso)")
 parser.add_argument("--ste-aniso", default="STEaniso",
                     help="Waveform compared with --ste-iso: V_STEaniso - V_STEiso (default STEaniso)")
+parser.add_argument("--frequency-models", action="store_true",
+                    help="Fit the linear, square root and squared frequency models and pick the best "
+                         "(off by default: with 3 frequencies the choice is not reliable)")
 parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
-                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                    help="With --frequency-models: criterion for the best model (default sse; aic ranks the same "
                          "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 intercept = "fixed at 0" if args.fix_intercept else "fitted"
@@ -125,20 +129,21 @@ if {args.ste_iso, args.ste_aniso} <= set(by_name.index):
 
 #Frequency dependence of V_iso and V_aniso (each model has two parameters, so
 #at least three frequencies are needed to compare them)
-frequency_rows = []
 best_fits = {}
-for quantity, freq, values in [("V_iso", ste.Frequency.to_numpy(), ste.Variance.to_numpy()),
-                               ("V_aniso", pairs.Frequency_STE.to_numpy(), pairs.V_aniso.to_numpy())]:
-    if len(values) < 3:
-        print(f"\nLess than three frequencies for {quantity}, skipping the frequency models")
-        continue
-    freq_fits, best = fit_frequency_models(freq, values, args.model_criterion)
-    best_fits[quantity] = (freq_fits[best], best)
-    print(f"{quantity} Best Fit: {best}")
-    for model, model_fit in freq_fits.items():
-        frequency_rows.append({"Quantity": quantity, "Model": model, **model_fit, "Best": model == best})
-pd.DataFrame(frequency_rows, columns=["Quantity", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
-             ).to_csv(f"{output}/viso_frequency_fit.csv", index=False)
+if args.frequency_models:
+    frequency_rows = []
+    for quantity, freq, values in [("V_iso", ste.Frequency.to_numpy(), ste.Variance.to_numpy()),
+                                   ("V_aniso", pairs.Frequency_STE.to_numpy(), pairs.V_aniso.to_numpy())]:
+        if len(values) < 3:
+            print(f"\nLess than three frequencies for {quantity}, skipping the frequency models")
+            continue
+        freq_fits, best = fit_frequency_models(freq, values, args.model_criterion)
+        best_fits[quantity] = (freq_fits[best], best)
+        print(f"{quantity} Best Fit: {best}")
+        for model, model_fit in freq_fits.items():
+            frequency_rows.append({"Quantity": quantity, "Model": model, **model_fit, "Best": model == best})
+    pd.DataFrame(frequency_rows, columns=["Quantity", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
+                 ).to_csv(f"{output}/viso_frequency_fit.csv", index=False)
 
 #D, K and V against the centroid frequency
 x = np.linspace(0, 1.1 * fits.Frequency.max(), 200)   # model curves only near the data

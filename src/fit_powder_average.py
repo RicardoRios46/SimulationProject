@@ -2,7 +2,7 @@
 Powder-average analysis
 Averages the signal over the rotations (powder average) for each waveform and
 b-value, fits the cumulant expansion of the log-signal for each waveform, and
-fits the frequency dependence of D, K and V for each encoding (LTE, STE).
+plots D, K and V against the frequency for each encoding (LTE, STE).
 
 The waveforms are identified from their files in waveforms/ (see
 analysis_utils.waveform_info): the encoding (LTE, STE or other) from the
@@ -15,17 +15,18 @@ Cumulant fit of log(signal), b in ms/µm²:
     D = -B, V = 2A, K = 3V/D², k3 = -6E, skewness = k3 / V^(3/2)
 C is fitted, or fixed at 0 (S = 1 at b = 0) with --fix-intercept.
 
-Frequency dependence: for each encoding with at least three waveforms
-(frequencies), D, K and V are fitted against the centroid frequency with
-linear, square root and squared models; the lowest least-squares error is
-reported as the best fit. Encodings with fewer waveforms are only plotted.
+Frequency models (optional, --frequency-models): for each encoding with at
+least three waveforms (frequencies), D, K and V are fitted against the
+centroid frequency with linear, square root and squared models; the lowest
+least-squares error is reported as the best fit. Off by default: with three
+frequencies the choice between the models is not reliable.
 
 Outputs in graphOutputs/<signal>/ (overwritten by each run, whatever the options):
     powder_average_signal.csv           Powder-averaged signal per waveform and b-value
     powder_average_fit.csv              Per waveform: encoding, frequency, fit settings,
                                         coefficients C, B, A, E, D, kurtosis, variance
                                         (and k3, skewness for order 3)
-    powder_average_frequency_fit.csv    Frequency-dependence models per encoding and parameter
+    powder_average_frequency_fit.csv    Frequency models per encoding and parameter (--frequency-models)
     signal_fit_<signal>.svg             Signal decay with the fits (D, K, V and, for order 3, k3)
     Diffusivity_/Kurtosis_/Variance_<signal>.svg   Frequency dependence of D, K, V
 
@@ -48,8 +49,11 @@ parser.add_argument("--order", type=int, choices=[2, 3], default=3,
                     help="Order of the polynomial in b fitted to log(signal) (default 3)")
 parser.add_argument("--fix-intercept", action="store_true",
                     help="Fix the intercept C = 0 (signal = 1 at b = 0) instead of fitting it")
+parser.add_argument("--frequency-models", action="store_true",
+                    help="Fit the linear, square root and squared frequency models and pick the best "
+                         "(off by default: with 3 frequencies the choice is not reliable)")
 parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
-                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                    help="With --frequency-models: criterion for the best model (default sse; aic ranks the same "
                          "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 intercept = "fixed at 0" if args.fix_intercept else "fitted"
@@ -150,14 +154,14 @@ for param_name, key, ylabel in paramList:
             ax.annotate(info[wf]["label"], (f, p), textcoords="offset points", xytext=(4, 4), fontsize=7)
 
         #Each model has two parameters, so at least three frequencies are needed to compare them
-        if len(group) >= 3:
+        if args.frequency_models and len(group) >= 3:
             freq_fits, best = fit_frequency_models(freq, param, args.model_criterion)
             print(f"{enc} {param_name} Best Fit: {best}")
             plot_frequency_models(ax, freq_fits, best, x1, label_suffix=" Fit")
             for model, model_fit in freq_fits.items():
                 frequency_rows.append({"Encoding": enc, "Parameter": param_name, "Model": model, **model_fit,
                                        "Best": model == best})
-        else:
+        elif args.frequency_models:
             ax.text(0.5, 0.5, f"{len(group)} {enc} waveform(s):\nat least 3 frequencies\nneeded for the model fits",
                     transform=ax.transAxes, ha="center", va="center", fontsize=8, color="gray")
 
@@ -173,7 +177,8 @@ for param_name, key, ylabel in paramList:
     plt.savefig(f"{output}/{param_name}_{name}.svg", dpi=300)
     plt.close(fig)
 
-pd.DataFrame(frequency_rows, columns=["Encoding", "Parameter", "Model", "Slope", "Intercept", "SSE", "AIC",
-                                     "AkaikeWeight", "Best"]
-             ).to_csv(f"{output}/powder_average_frequency_fit.csv", index=False)
+if args.frequency_models:
+    pd.DataFrame(frequency_rows, columns=["Encoding", "Parameter", "Model", "Slope", "Intercept", "SSE", "AIC",
+                                         "AkaikeWeight", "Best"]
+                 ).to_csv(f"{output}/powder_average_frequency_fit.csv", index=False)
 print(f"\nSaved results to {output}/")

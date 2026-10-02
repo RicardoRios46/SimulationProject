@@ -1,7 +1,7 @@
 """
 Tensor (DKI) analysis
 Fits DKI (DIPY) on each LTE waveform, using all its rotations and b-values,
-for FA, MD, AD and RD, and fits the frequency dependence of MD, AD and RD.
+for FA, MD, AD and RD, and plots MD, AD and RD against the frequency.
 
 The waveforms are identified from their files in waveforms/ (see
 analysis_utils.waveform_info): LTE waveforms from the b-tensor shape, the
@@ -9,13 +9,15 @@ frequency as the centroid frequency of the dephasing spectrum |Q(f)|^2, and
 the LTE direction as the main axis of the b-tensor. Simulation.py rotates the
 waveform as g @ R.T, so the gradient direction of each rotation R is R @ u.
 
-Frequency dependence: with at least three LTE waveforms (frequencies), MD, AD
-and RD are fitted against the centroid frequency with linear, square root and
-squared models; the lowest least-squares error is reported as the best fit.
+Frequency models (optional, --frequency-models): with at least three LTE
+waveforms (frequencies), MD, AD and RD are fitted against the centroid
+frequency with linear, square root and squared models; the lowest
+least-squares error is reported as the best fit. Off by default: with three
+frequencies the choice between the models is not reliable.
 
 Outputs in graphOutputs/<signal>/:
     tensor_fit.csv              Per LTE waveform: frequency, FA, MD, AD, RD
-    tensor_frequency_fit.csv    Frequency-dependence models per parameter
+    tensor_frequency_fit.csv    Frequency models per parameter (--frequency-models)
     MD_AD_RD.png                Frequency dependence of MD, AD and RD
 
 Usage (from the project root):
@@ -35,8 +37,11 @@ from analysis_utils import (output_dir, load_signals, waveform_info,
 
 parser = argparse.ArgumentParser(description="Fit DKI on the LTE waveforms (FA, MD, AD, RD).")
 parser.add_argument("signals", help="Signal CSV written by Simulation.py")
+parser.add_argument("--frequency-models", action="store_true",
+                    help="Fit the linear, square root and squared frequency models and pick the best "
+                         "(off by default: with 3 frequencies the choice is not reliable)")
 parser.add_argument("--model-criterion", choices=["sse", "aic"], default="sse",
-                    help="Criterion for the best frequency model (default sse; aic ranks the same "
+                    help="With --frequency-models: criterion for the best model (default sse; aic ranks the same "
                          "while all models have 2 parameters, see analysis_utils.fit_frequency_models)")
 args = parser.parse_args()
 
@@ -80,12 +85,12 @@ pd.DataFrame([{
     **dki_results[wf],
 } for wf in lte]).to_csv(f"{output}/tensor_fit.csv", index=False)
 
-#Frequency dependence of MD, AD and RD
+#Frequency dependence of MD, AD and RD (models optional)
 #Each model has two parameters, so at least three frequencies are needed to compare them
 frequency_rows = []
-if len(lte) < 3:
-    print("\nLess than three LTE waveforms, skipping the frequency dependence fits")
-else:
+if args.frequency_models and len(lte) < 3:
+    print("\nLess than three LTE waveforms, skipping the frequency models")
+if len(lte) > 1:
     freq = np.array([info[wf]["frequency"] for wf in lte])
     x1 = np.linspace(0, max(150, 1.1 * freq.max()), 100)
 
@@ -100,27 +105,24 @@ else:
 
     for metric_name, key, ax in metrics:
         diff = np.array([dki_results[wf][key] for wf in lte])
-        freq_fits, best = fit_frequency_models(freq, diff, args.model_criterion)
-        print(f"{key} Best Fit: {best}")
-        for model, model_fit in freq_fits.items():
-            frequency_rows.append({"Parameter": key, "Model": model, **model_fit, "Best": model == best})
-
         ax.scatter(freq, diff, color="red", marker="o", s=30, zorder=5, label="Data Points")
-        plot_frequency_models(ax, freq_fits, best, x1)
 
-        #Display best-fit equation and values
-        slope, intercept = freq_fits[best]["Slope"], freq_fits[best]["Intercept"]
-        power = {"Linear": "x", "Square Root": "x^1/2", "Squared": "x^2"}[best]
-        values_text = "\n".join(f"{info[wf]['label']} ({f:.1f} Hz) = {v:.3f}"
-                                for wf, f, v in zip(lte, freq, diff))
-        eq_text = (
-            f"Best Fit: {best}\n"
-            f"y = {slope:.3f}{power} {intercept:+.3f}\n\n"
-            f"{values_text}"
-        )
-        ax.text(0.02, 0.98, eq_text, transform=ax.transAxes, fontsize=8, verticalalignment="top",
+        #Values, and the best-fit equation with --frequency-models
+        text = "\n".join(f"{info[wf]['label']} ({f:.1f} Hz) = {v:.3f}"
+                         for wf, f, v in zip(lte, freq, diff))
+        if args.frequency_models and len(lte) >= 3:
+            freq_fits, best = fit_frequency_models(freq, diff, args.model_criterion)
+            print(f"{key} Best Fit: {best}")
+            for model, model_fit in freq_fits.items():
+                frequency_rows.append({"Parameter": key, "Model": model, **model_fit, "Best": model == best})
+            plot_frequency_models(ax, freq_fits, best, x1)
+            slope, intercept = freq_fits[best]["Slope"], freq_fits[best]["Intercept"]
+            power = {"Linear": "x", "Square Root": "x^1/2", "Squared": "x^2"}[best]
+            text = f"Best Fit: {best}\ny = {slope:.3f}{power} {intercept:+.3f}\n\n{text}"
+        ax.text(0.02, 0.98, text, transform=ax.transAxes, fontsize=8, verticalalignment="top",
                 bbox=dict(facecolor="white", alpha=0.85, edgecolor="black"))
 
+        ax.set_xlim(x1[0], x1[-1])
         ax.set_ylim(min(all_values) * 0.6, max(all_values) * 1.3)
         ax.set_ylabel(f"{metric_name} ($\\mathrm{{µm^2/ms}}$)")
         ax.set_xlabel("Centroid frequency (Hz)")
@@ -132,6 +134,7 @@ else:
     plt.savefig(f"{output}/MD_AD_RD.png", dpi=300)
     plt.close(fig)
 
-pd.DataFrame(frequency_rows, columns=["Parameter", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
-             ).to_csv(f"{output}/tensor_frequency_fit.csv", index=False)
+if args.frequency_models:
+    pd.DataFrame(frequency_rows, columns=["Parameter", "Model", "Slope", "Intercept", "SSE", "AIC", "AkaikeWeight", "Best"]
+                 ).to_csv(f"{output}/tensor_frequency_fit.csv", index=False)
 print(f"\nSaved results to {output}/")
